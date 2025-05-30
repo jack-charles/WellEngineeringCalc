@@ -1,6 +1,8 @@
-Library of functions that solve a number of O&G issues. Simply add it to your projects as _import wellengcalc as wec_ and call the functions as needed. Each function has the units needed.
+Library of functions that solve a number of O&G issues. Simply add it to your projects as _import wellengcalc as wec_ and call the functions as needed. Each function has the units needed to work internally.
 
-This will be where final, checked versions of the functions will be kept, however there is no guarantee the answer is correct, please do your due diligence when using these calculations.
+I have done my best to validate each of these functions, and will continue throughout 2025 to reverify them. Where possible I have listed the source of each for your own review. There is no guarantee the functions are correct, so please do your due diligence when using these calculations.
+
+If you find errors, please feel free to let me know!
 
 #VELOCITY, RHEOLOGY, FRICTION EQUATIONS
 #DELTA-PRESSURE EQUATIONS
