@@ -413,47 +413,6 @@ def calc_horizontal_transport_Oroskar(hydraulic_diameter, solid_diameter, solid_
         (hydraulic_diameter * fluid_density * math.sqrt(GRAVITY_CONSTANT * (solid_diameter) * (solid_density / fluid_density - 1)) / fluid_viscosity) ** _CONSTn4 * x ** _CONSTn5
     return calc_horizontal_transport_Oroskar
 
-def calc_horizontal_transport_Tallin(hydraulic_diameter, solid_diameter, solid_density, fluid_density, fluid_viscosity, c, dune_height, hole_diameter,
-     _CONSTY = 3.445, _CONSTn1 = -3.743, _CONSTn2 = 0.3075, _CONSTn3 = 0.065, _CONSTn4 = 1): #Andy Tallin's modification to Oroskar Solution
-    #solid_density,fluid_density:ppg      hydraulic_diameter,solid_diameter,hole_diameter:in     viscosity:cP  height:height of dune    output:ft/s
-    #c: solids concentration, loading/(loading+density)
-    _CONST1 = 0.2886751346   #constant
-    _CONST2 = 1.5591255282   #constant for modified Re
-
-    if _CONSTY == None:
-    #Newtonian & Power Law
-        _CONSTY = 3.445      #experimentally derive this for power law
-        _CONSTn1 = -3.743
-        _CONSTn2 = 0.3075
-        _CONSTn3 = 0.065    #experimentally derive this for power law
-        _CONSTn4 = 1        #experimentally derive this for power law
-
-    #calc_horizontal_transport_Tallin = sqrt(GRAVITY_CONSTANT * (solid_diameter / 12) * (solid_density / fluid_density - 1)) * _
-        #3.445 * (1 - c) ** -3.743 * (hydraulic_diameter / solid_diameter * (1 - height / hole_diameter)) ** 0.3075 * _
-        #(928 * hydraulic_diameter * fluid_density * sqrt(GRAVITY_CONSTANT * (solid_diameter / 12) * (solid_density / fluid_density - 1)) / fluid_viscosity) ** 0.065
-
-    #calc_horizontal_transport_Tallin = _CONST1 * sqrt(GRAVITY_CONSTANT * (solid_diameter) * (solid_density / fluid_density - 1)) * _
-        #3.445 * (1 - c) ** -3.743 * (hydraulic_diameter / solid_diameter * (1 - height / hole_diameter)) ** 0.3075 * _
-        #_CONST2 * (hydraulic_diameter * fluid_density * sqrt(GRAVITY_CONSTANT * (solid_diameter) * (solid_density / fluid_density - 1)) / fluid_viscosity) ** 0.065
-
-    calc_horizontal_transport_Tallin = _CONST1 * math.sqrt(GRAVITY_CONSTANT * (solid_diameter) * (solid_density / fluid_density - 1)) * \
-        _CONSTY * (1 - c) ** _CONSTn1 * (hydraulic_diameter / solid_diameter * (1 - dune_height / hole_diameter)) ** _CONSTn2 * _CONST2 * \
-        (hydraulic_diameter * fluid_density * math.sqrt(GRAVITY_CONSTANT * (solid_diameter) * (solid_density / fluid_density - 1)) / fluid_viscosity) ** _CONSTn3
-    return calc_horizontal_transport_Tallin
-
-def calc_horizontal_transport_Hang(hydraulic_diameter, solid_diameter, solid_density, fluid_density, slurryDensity, fluid_viscosity):
-    #hydraulic_diameter:in   solid_diameter:in   solid_density:ppg    fluid_density:ppg   slurryDensity:ppg   fluid_viscosity:cP    output:ft/s
-    _CONST1 = 9.912
-    _CONST2 = 0.289
-
-    V1 = _CONST1 * (0.0251 * GRAVITY_CONSTANT * solid_diameter * (solid_density / fluid_density - 1) * ((hydraulic_diameter * slurryDensity) / fluid_viscosity) ** 0.775) ** 0.816
-    V2 = _CONST2 * (1.35 * 2 * GRAVITY_CONSTANT * hydraulic_diameter * (solid_density / fluid_density - 1)) ** 0.5
-    if V1 > V2:
-        calc_horizontal_transport_Hang = V1
-    else: 
-        calc_horizontal_transport_Hang = V2
-    return calc_horizontal_transport_Hang
-
 def calc_horizontal_transport_SPE(hydraulic_diameter, solid_diameter, solid_density, fluid_density, fluid_viscosity): 
     #solid_density,fluid_density:ppg      hydraulic_diameter,solid_diameter:in     fluid_viscosity:cP      output:ft/s
     #from SPE97142
@@ -644,16 +603,6 @@ def calcEatonFracPermeable(overburdenPressure, porePressure, poissonsRatio, biot
 #overburdenPressure:psi     porePressure:psi    output:psi      #psi/ft can be used also but must be consistent!
     calcEatonFracPermeable = 2 * poissonsRatio * (overburdenPressure - biotNumber * porePressure) + biotNumber * porePressure
     return calcEatonFracPermeable
-
-def calcAWTClosure(overburdenPressure, porePressure):       #from AWT/GWong
-#overburdenPressure:psi     porePressure:psi
-    calcAWTClosure = 0.488 * (overburdenPressure - porePressure) + porePressure
-    return calcAWTClosure
-
-def calcAWTFrac(overburdenPressure, porePressure):  #from AWT/GWong
-#overburdenPressure:psi     porePressure:psi
-    calcAWTFrac = 0.6934 * (overburdenPressure - porePressure) + porePressure
-    return calcAWTFrac
 
 def calcOverburden(seawaterDensity, rockDensity, liquidDensity, formationDepth, seabedDepth, phi_0):    #from Applied Drilling Engineering
 #seawaterDensity, rockDensity, liquidDensity:ppg     formationDepth, seabedDepth:ft     output:psi
@@ -893,100 +842,6 @@ def calcGdefTime(timeTotal, timePumped, alpha):
 #*************************************************************************
 #ALPHA BETA PACKING
 #*************************************************************************
-#Alpha-Beta calculations, Hang solution
-def Cfunction(outer_diameter, dune_height):    #ft
-    #outer_diameter, dune_height: ft
-    Cfunction = 2 * math.sqrt(dune_height * (outer_diameter - dune_height))
-    return Cfunction
-
-def Sfunction(outer_diameter, dune_height):    #ft
-    #outer_diameter, dune_height: ft
-    Sfunction = outer_diameter * math.acos((2 * dune_height - outer_diameter) / outer_diameter)
-    return Sfunction
-
-def Gfunction(outer_diameter, dune_height):    #ft2
-    #outer_diameter, dune_height: ft
-    Gfunction = 0.25 * (outer_diameter * Sfunction(outer_diameter, dune_height) - (2 * dune_height - outer_diameter) * Cfunction(outer_diameter, dune_height))
-    return Gfunction
-
-def Pfunction(outer_diameter, dune_height, H1, H2, inner_diameter):    #in
-    #outer_diameter, dune_height, H1, H2, inner_diameter: in
-    if dune_height < H1: 
-        Pfunction = Cfunction(outer_diameter, dune_height) + Sfunction(outer_diameter, dune_height) + math.pi * inner_diameter
-    elif dune_height > H2: 
-        Pfunction = Cfunction(outer_diameter, dune_height) + Sfunction(outer_diameter, dune_height)
-    else: 
-        Pfunction = Cfunction(outer_diameter, dune_height) - Cfunction(inner_diameter, dune_height - H1) + Sfunction(outer_diameter, dune_height) + Sfunction(inner_diameter, dune_height - H1)
-    return Pfunction
-
-def Afunction(outer_diameter, dune_height, H1, H2, inner_diameter):    #in2
-    #outer_diameter, dune_height, H1, H2, inner_diameter: in
-    if dune_height < H1:
-        Afunction = Gfunction(outer_diameter, dune_height) - math.pi / 4 * inner_diameter ** 2
-    elif dune_height > H2:
-        Afunction = Gfunction(outer_diameter, dune_height)
-    else:
-        Afunction = Gfunction(outer_diameter, dune_height) - Gfunction(inner_diameter, dune_height - H1)
-    return Afunction 
-
-def calcAlphaWaveDHHang(outer_diameter, inner_diameter, centralizerOD, DHR):
-#outer_diameter, innerOD, centralizerOD: in    DHR: dimensionless
-    H1 = (centralizerOD - inner_diameter) / 2
-    H2 = H1 + inner_diameter
-    duneHeight = DHR * outer_diameter
-    calcAlphaWaveDHHang = 4 * Afunction(outer_diameter, duneHeight, H1, H2, inner_diameter) / Pfunction(outer_diameter, duneHeight, H1, H2, inner_diameter)
-    return calcAlphaWaveDHHang
-
-def calcAlphaWaveHang(outerID, outerRoughness, innerOD, innerID, innerRoughness, centralizerOD, washpipeOD, washipipeID, washpipeRoughness, proppantDiameter, proppantDensity, solid_loading, absVol, fluid_density, fluid_viscosity, DHR):      
-#calculate critical velocity and friction based on DHR
-    duneHeight = DHR * outerID
-    hydraulic_diameter = calcAlphaWaveDHHang(outerID, innerOD, centralizerOD, DHR)
-    c = solid_loading / (proppantDensity * 8.34 + solid_loading)
-    slurryViscosity = fluid_viscosity * calc_slurry_viscosity(solid_loading, proppantDensity * 8.34, fluid_density)
-    slurryDensity = calc_slurry_density(fluid_density, absVol, solid_loading)
-    transportVelocity = calc_horizontal_transport_Hang(hydraulic_diameter, proppantDiameter, proppantDensity * 8.34, fluid_density, slurryDensity, fluid_viscosity)
-    screenOHRate = unit(transportVelocity * Afunction(outerID, duneHeight, (centralizerOD - innerOD) / 2, (centralizerOD - innerOD) / 2 + innerOD, innerOD) / 144, "ft3", "bbl") * 60
-    NRe = calc_NRe_newton(transportVelocity, hydraulic_diameter, slurryDensity, slurryViscosity)
-    frictionFactorAlpha = calc_friction_colebrook(hydraulic_diameter, NRe, outerRoughness)
-    screenOHDP = calc_DPf(frictionFactorAlpha, slurryDensity, transportVelocity, hydraulic_diameter, 1)
-    
-    #WashpipeScreenRate
-    exitConverged = 1       #exits if converged
-    loopCounter = 1         #limits number of loops to prevent lockup
-    q1 = screenOHRate       #bpm
-    dq = 0.001  #bpm
-    while abs(exitConverged) > 0.01 and loopCounter < 100:
-        #first loop, q1
-        q = q1
-        NRe = calc_NRe_newton(calc_fluid_velocity(q, washpipeOD, innerID), innerID - washpipeOD, fluid_density, fluid_viscosity)
-        frictionFactorWPSCR = calc_friction_colebrook(innerID - washpipeOD, NRe, innerRoughness)
-        washpipeScreenDP1 = calc_DPf(frictionFactorWPSCR, fluid_density, calc_fluid_velocity(q, washpipeOD, innerID), innerID - washpipeOD, 1)
-        
-        #second loop, q2
-        q = q1 + dq
-        NRe = calc_NRe_newton(calc_fluid_velocity(q, washpipeOD, innerID), innerID - washpipeOD, fluid_density, fluid_viscosity)
-        frictionFactorWPSCR = calc_friction_colebrook(innerID - washpipeOD, NRe, innerRoughness)
-        washpipeScreenDP2 = calc_DPf(frictionFactorWPSCR, fluid_density, calc_fluid_velocity(q, washpipeOD, innerID), innerID - washpipeOD, 1)
-        
-        y1 = screenOHDP - washpipeScreenDP1
-        y2 = screenOHDP - washpipeScreenDP2
-        q2 = q1 - y1 / ((y2 - y1) / dq)
-        exitConverged = q2 - q1
-        loopCounter = loopCounter + 1
-        q1 = q2
-    
-    washpipeScreenRate = q1
-    vel = calc_fluid_velocity(washpipeScreenRate, washpipeOD, innerID)
-    NRe = calc_NRe_newton(vel, innerID - washpipeOD, fluid_density, fluid_viscosity)
-    frictionFactorWPSCR = calc_friction_colebrook(innerID - washpipeOD, NRe, innerRoughness)
-    washpipeScreenDP = calc_DPf(frictionFactorWPSCR, fluid_density, vel, innerID - washpipeOD, 1)
-    
-    returnRate = screenOHRate + washpipeScreenRate
-    output = [DHR,duneHeight, hydraulic_diameter, screenOHRate, washpipeScreenRate, returnRate]    
-    calcAlphaWaveHang = output[:]
-    return calcAlphaWaveHang
-    
-#****************************************************************
 def calc_tubing_dune_height(diameter, dune_height_ratio):     
     #height of dune in circular pipe. from Marks Standard Handbook, mechanics of fluids
     theta = 2 * math.acos(2 * dune_height_ratio - 1)
@@ -1004,7 +859,7 @@ def calc_tubing_dune_height(diameter, dune_height_ratio):
     calc_tubing_dune_height = output[:]
     return calc_tubing_dune_height
 
-#Alpha-Beta Calculations, Tallin solution
+#Alpha-Beta Calculations
 def calc_alpha_wave_dune_height(outer_diameter, inner_diameter, centralizer_diameter, dune_height_ratio):
     h = dune_height_ratio * outer_diameter
 
@@ -1050,19 +905,13 @@ def calcAlphaWave(outerID, outerRoughness, innerOD, innerID, innerRoughness, cen
     duneHeight = DHR * outerID
     hydraulic_diameter = calc_alpha_wave_dune_height(outerID, innerOD, centralizerOD, DHR)[0]
     equivalentDiameter = math.sqrt(calc_alpha_wave_dune_height(outerID,innerOD, centralizerOD, DHR)[1]* 4 / math.pi)
-#    equivalentDiameter = sqrt((Afunction(outerID, duneHeight, (centralizerOD - innerOD) / 2, (centralizerOD - innerOD) / 2 + innerOD, innerOD)) * 4 / pi)
     solid_loadingOH = solid_loading + 0.1
     c = solid_loadingOH / (proppantDensity * 8.34 + solid_loadingOH)
     slurryViscosity = fluid_viscosity * calc_slurry_viscosity(solid_loadingOH, proppantDensity * 8.34, fluid_density)
     slurryDensity = calc_slurry_density(fluid_density, absVol, solid_loadingOH)
     
-    if model == "AWT":
-        transportVelocity = calc_horizontal_transport_Tallin(hydraulic_diameter, proppantDiameter, proppantDensity * 8.34, fluid_density, fluid_viscosity, c, duneHeight, outerID)
-    elif model == "Oroskar":
-        transportVelocity = calc_horizontal_transport_Oroskar(equivalentDiameter, proppantDiameter, proppantDensity * 8.34, fluid_density, fluid_viscosity, c, 1)
-    elif model == "Hang":
-        transportVelocity = calc_horizontal_transport_Hang(hydraulic_diameter, proppantDiameter, proppantDensity * 8.34, fluid_density, slurryDensity, fluid_viscosity)
-    
+    transportVelocity = calc_horizontal_transport_Oroskar(equivalentDiameter, proppantDiameter, proppantDensity * 8.34, fluid_density, fluid_viscosity, c, 1)
+        
     screenOHRate = unit(transportVelocity * calc_alpha_wave_dune_height(outerID,innerOD, centralizerOD, DHR)[1] / 144, "ft3", "bbl") * 60
     NRe = calc_NRe_newton(transportVelocity, hydraulic_diameter, slurryDensity, slurryViscosity)
     frictionFactorAlpha = calc_friction_colebrook(hydraulic_diameter, NRe, outerRoughness)     #friction factor above dune
@@ -1106,13 +955,8 @@ def calcAlphaWave(outerID, outerRoughness, innerOD, innerID, innerRoughness, cen
         c = solid_loadingOH / (proppantDensity * 8.34 + solid_loadingOH)
         slurryViscosity = fluid_viscosity * calc_slurry_viscosity(solid_loadingOH, proppantDensity * 8.34, fluid_density)
         slurryDensity = calc_slurry_density(fluid_density, absVol, solid_loadingOH)
-        if model == "AWT":
-            transportVelocity = calc_horizontal_transport_Tallin(hydraulic_diameter, proppantDiameter, proppantDensity * 8.34, fluid_density, fluid_viscosity, c, duneHeight, outerID)
-        elif model == "Oroskar":
-            transportVelocity = calc_horizontal_transport_Oroskar(equivalentDiameter, proppantDiameter, proppantDensity * 8.34, fluid_density, fluid_viscosity, c, 1)
-        elif model == "Hang":
-            transportVelocity = calc_horizontal_transport_Hang(hydraulic_diameter, proppantDiameter, proppantDensity * 8.34, fluid_density, slurryDensity, fluid_viscosity)
-        
+       transportVelocity = calc_horizontal_transport_Oroskar(equivalentDiameter, proppantDiameter, proppantDensity * 8.34, fluid_density, fluid_viscosity, c, 1)
+                
         screenOHRate = unit(transportVelocity * calc_alpha_wave_dune_height(outerID,innerOD, centralizerOD, DHR)[1] / 144, "ft3", "bbl") * 60
         NRe = calc_NRe_newton(transportVelocity, hydraulic_diameter, slurryDensity, slurryViscosity)
         frictionFactorAlpha = calc_friction_colebrook(hydraulic_diameter, NRe, outerRoughness)
@@ -1354,15 +1198,6 @@ def calcSlackoffForce(force, axialBuoyWt, normalBuoyWt, normalBucklingWt, pulley
 def calcPickupForce(force, axialBuoyWt, normalBuoyWt, normalBucklingWt, pulleyWt, friction, length):
     calcPickupForce = force - (axialBuoyWt + (normalBuoyWt + normalBucklingWt + pulleyWt) * friction) * length
     return calcPickupForce
-
-#def xFictForceSlackoff(F2, wBuoyedAxial, wBuoyedNormal, wBucklingNormal, wPulley, ffriction, L):
-#    f1 = F2 - (wBuoyedAxial - (wBuoyedNormal + wBucklingNormal + wPulley) * ffriction) * L
-#    FictForceSlackoff = f1
-#
-#def xFictForcePickup(F2, wBuoyedAxial, wBuoyedNormal, wBucklingNormal, wPulley, ffriction, L):
-#    f1 = F2 - (wBuoyedAxial + (wBuoyedNormal + wBucklingNormal + wPulley) * ffriction) * L
-#    FictForcePickup = f1
-#
 
 
 
@@ -2428,131 +2263,5 @@ def calc_interpolate(x, x_vector, y_vector):
             y = (x - x_1) / (x_2 - x_1) * (y_2 - y_1) + y_1
             i = len(x_vector)  
     calcInterp = y
-    """    
-    for i in range(len(x_vector)):
-        if x == x_vector[i]:     #exact solution
-            y = y_vector[i]
-            i = len(x_vector)
-        elif x < x_vector[0]:     #if below range
-            x_1 = x_vector[0]
-            x_2 = x_vector[1]
-            y_1 = y_vector[0]
-            y_2 = y_vector[1]
-            y = y_1 - (x_1 - x) / (x_2 - x_1) * (y_2 - y_1)
-            i = len(x_vector)
-        elif x > x_vector[len(x_vector)]:     #if above range
-            x_1 = x_vector[len(x_vector) - 2]
-            x_2 = x_vector[len(x_vector) - 1]
-            y_1 = y_vector[len(y_vector) - 2]
-            y_2 = y_vector[len(y_vector) - 1]
-            y = (x - x_2) / (x_2 - x_1) * (y_2 - y_1) + y_2
-            i = len(y_vector)
-        elif x > x_vector[i] and x < x_vector[i + 1]:     #if between values
-            x_1 = x_vector[i]
-            x_2 = x_vector[i + 1]
-            y_1 = y_vector[i]
-            y_2 = y_vector[i + 1]
-            y = (x - x_1) / (x_2 - x_1) * (y_2 - y_1) + y_1
-            i = len(x_vector)  
-    calcInterp = y
-    """
     return calcInterp
 
-# #*************************************************************************
-# #from https://msdn.microsoft.com/en-us/library/csfk8t62(VS.85).aspx
-# def Log10(x)   #log base 10 conversion
-#     Log10 = Log(x) / Log(10)
-
-# def Sec(x)     #Secant
-#     Sec = 1 / Cos(x)
-
-# def Cosec(x)   #Cosecant
-#     Cosec = 1 / Sin(x)
-
-# def Cotan(x)   #Cotangent
-#     Cotan = 1 / Tan(x)
-
-# def Arcsin(x)  #Inverse Sine
-#     if x = 1:
-#         Arcsin = pi / 2
-#     elif x = -1:
-#         Arcsin = -pi / 2
-#     Else
-#         Arcsin = Atn(x / sqrt(-x * x + 1))   
-
-# def Arccos(x)  #Inverse Cosine
-#     if x = -1:
-#         Arccos = pi
-#     elif x = 1:
-#         Arccos = 0
-#     Else
-#         Arccos = Atn(-x / sqrt(-x * x + 1)) + 2 * Atn(1)   
-
-# def Arcsec(x)  #Inverse Secant
-#     Arcsec = Atn(x / sqrt(x * x - 1)) + Sgn((x) - 1) * (2 * Atn(1))
-
-# def Arccosec(x)    #Inverse Cosecant
-#     Arccosec = Atn(x / sqrt(x * x - 1)) + (Sgn(x) - 1) * (2 * Atn(1))
-
-# def Arccotan(x)    #Inverse Cotangent
-#     Arccotan = -Atn(x) + 2 * Atn(1)
-
-# def HSin(x)    #Hyperbolic Sine
-#     HSin = (Exp(x) - Exp(-x)) / 2
-
-# def HCos(x)    #Hyperbolic Cosine
-#     HCos = (Exp(x) + Exp(-x)) / 2
-
-# def HTan(x)    #Hyperbolic Tangent
-#     HTan = (Exp(x) - Exp(-x)) / (Exp(x) + Exp(-x))
-
-# def HSec(x)    #Hyperbolic Secant
-#     HSec = 2 / (Exp(x) + Exp(-x))
-
-# def HCosec(x)  #Hyperbolic Cosecant
-#     HCosec = 2 / (Exp(x) - Exp(-x))
-
-# def HCotan(x)  #Hyperbolic Cotangent
-#     HCotan = (Exp(x) + Exp(-x)) / (Exp(x) - Exp(-x))
-
-# def HArcsin(x) #Inverse Hyperbolic Sine
-#     HArcsin = Log(x + sqrt(x * x + 1))
-
-# def HArccos(x) #Inverse Hyperbolic Cosine
-#     HArccos = Log(x + sqrt(x * x - 1))
-
-# def HArctan(x) #Inverse Hyperbolic Tangent
-#     HArctan = Log((1 + x) / (1 - x)) / 2
-
-# def HArcsec(x) #Inverse Hyperbolic Secant
-#     HArcsec = Log((sqrt(-x * x + 1) + 1) / x)
-
-# def HArccosec(x)   #Inverse Hyperbolic Cosecant
-#     HArccosec = Log((Sgn(x) * sqrt(x * x + 1) + 1) / x)
-
-# def HArccotan(x)   #Inverse Hyperbolic Cotangent
-#     HArccotan = Log((x + 1) / (x - 1)) / 2
-
-# def ATn2(ByVal DX As Double, ByVal DY As Double) As Double
-#     if DY < 0:
-#         ATn2 = -ATn2(DX, -DY)
-#     elif DX < 0:
-#         ATn2 = pi - Atn(-DY / DX)
-#     elif DX > 0:
-#         ATn2 = Atn(DY / DX)
-#     elif DY <> 0:
-#         ATn2 = pi / 2
-#     Else
-#         ATn2 = 1 / 0
-    
-# def Atn2v(ByVal DX As Double, ByVal DY As Double) As Double
-#     if DY < 0:
-#         Atn2v = -Atn2v(DX, -DY)
-#     elif DX < 0:
-#         Atn2v = pi - Atn(-DY / DX)
-#     elif DX > 0:
-#         Atn2v = Atn(DY / DX)
-#     elif DY <> 0:
-#         Atn2v = pi / 2
-#     Else
-#         Atn2v = CVErr(xlErrDiv0)
