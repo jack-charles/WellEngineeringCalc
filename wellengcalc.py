@@ -33,41 +33,41 @@ import thermopy as tp
 #VELOCITY, RHEOLOGY, FRICTION EQUATIONS
 #*************************************************************************
 def calc_fluid_velocity(fluid_rate, casing_diameter, tubing_diameter=0):
-    #flowRate:bbl/min   tubingDiameter, casingDiameter:in   output:ft/s
+    #flow_rate:bbl/min   tubing_diameter, casing_diameter:in   output:ft/s
     #this def only needs one diameter input, other can be 0. No preference on order
     _CONST = 13.475
     if abs(casing_diameter ** 2 - tubing_diameter ** 2) == 0: 
-        calc_fluid_velocity = 0
+        fluid_velocity = 0
     else: 
-        calc_fluid_velocity = _CONST * 4 * fluid_rate / math.pi / abs(casing_diameter ** 2 - tubing_diameter ** 2)
-    return calc_fluid_velocity
+        fluid_velocity = _CONST * 4 * fluid_rate / math.pi / abs(casing_diameter ** 2 - tubing_diameter ** 2)
+    return fluid_velocity
 
-def calc_shear_rate(nPrime, fluid_velocity, hydraulic_diameter, geometry):
+def calc_shear_rate(nPrime, fluid_velocity, hydraulic_diameter, geometry: str):
     #fluid_velocity:ft/s    hydraulic_diameter:in   geometry:Pipe or Slot   output:1/s
     _CONST = 12
     if geometry == "Pipe": 
-        calc_shear_rate = ((3 * nPrime + 1) / (4 * nPrime)) * _CONST * 8 * fluid_velocity / hydraulic_diameter
+        shear_rate = ((3 * nPrime + 1) / (4 * nPrime)) * _CONST * 8 * fluid_velocity / hydraulic_diameter
     elif geometry == "Slot": 
-        calc_shear_rate == ((2 * nPrime + 1) / (3 * nPrime)) * _CONST * 6 * fluid_velocity / hydraulic_diameter
+        shear_rate == ((2 * nPrime + 1) / (3 * nPrime)) * _CONST * 6 * fluid_velocity / hydraulic_diameter
     else: 
-        calc_shear_rate = 0
-    return calc_shear_rate
+        shear_rate = 0
+    return shear_rate
 
 def calc_power_viscosity_pipe(nPrime, kPrime, fluid_velocity, hydraulic_diameter):
     #kPrime:lbf-sn/ft2, generalized K, not geometry specific!    fluid_velocity:ft/s   hydraulic_diameter:in     output:cP
     _CONST = 12
     shear_rate = ((3 * nPrime + 1) / (4 * nPrime)) * _CONST * 8 * fluid_velocity / hydraulic_diameter
     fluid_viscosity = (kPrime * ((3 * nPrime + 1) / (4 * nPrime)) ** nPrime) * shear_rate ** (nPrime - 1)
-    calc_power_viscosity_pipe = unit(fluid_viscosity, "lbf-s/ft2", "cP")
-    return calc_power_viscosity_pipe
+    power_viscosity_pipe = unit(fluid_viscosity, "lbf-s/ft2", "cP")
+    return power_viscosity_pipe
 
 def calc_power_viscosity_slot(nPrime, kPrime, fluid_velocity, hydraulic_diameter):
     #kPrime:lbf-sn/ft2, generalized K, not geometry specific!    fluid_velocity:ft/s   hydraulic_diameter(slot width):in     output:cP
     _CONST = 12
-    shearRate = ((2 * nPrime + 1) / (3 * nPrime)) * _CONST * 6 * fluid_velocity / hydraulic_diameter
-    fluid_viscosity = (kPrime * ((2 * nPrime + 1) / (3 * nPrime)) ** nPrime) * shearRate ** (nPrime - 1)
-    calc_power_viscosity_slot = unit(fluid_viscosity, "lbf-s/ft2", "cP")
-    return calc_power_viscosity_slot
+    shear_rate = ((2 * nPrime + 1) / (3 * nPrime)) * _CONST * 6 * fluid_velocity / hydraulic_diameter
+    fluid_viscosity = (kPrime * ((2 * nPrime + 1) / (3 * nPrime)) ** nPrime) * shear_rate ** (nPrime - 1)
+    power_viscosity_slot = unit(fluid_viscosity, "lbf-s/ft2", "cP")
+    return power_viscosity_slot
 
 def calc_power_viscosity_apparent(nPrime, kPrime, shear_rate):      
     #kPrime:lbf-sn/ft2, generalized K, not geometry specific!    shearRate:1/s     output:cP
@@ -75,77 +75,74 @@ def calc_power_viscosity_apparent(nPrime, kPrime, shear_rate):
     _CONST = 1
     #fluid_viscosity = 47880 * kPrime / shearRate ** (1 - nPrime)   #no conversion needed, kPrime is geometry-dependent
     fluid_viscosity = _CONST * kPrime * ((3 * nPrime + 1) / (4 * nPrime)) ** nPrime * shear_rate ** (nPrime - 1)
-    calc_power_viscosity_apparent = unit(fluid_viscosity, "lbf-s/ft2", "cP")
-    return calc_power_viscosity_apparent
+    power_viscosity_apparent = unit(fluid_viscosity, "lbf-s/ft2", "cP")
+    return power_viscosity_apparent
 
 def calc_kPrime(nPrime, fluid_viscosity, shear_rate):
     #fluid_viscosity:cP    shear_rate:1/s     output:lbf-sn/ft2
     _CONST = 1
-    calc_kPrime = _CONST * unit(fluid_viscosity, "cP", "lbf-s/ft2") / (((3 * nPrime + 1) / (4 * nPrime)) ** nPrime * shear_rate ** (nPrime - 1))
-    return calc_kPrime
+    kPrime = _CONST * unit(fluid_viscosity, "cP", "lbf-s/ft2") / (((3 * nPrime + 1) / (4 * nPrime)) ** nPrime * shear_rate ** (nPrime - 1))
+    return kPrime
 
 def calc_slurry_viscosity_keck(nPrime, fluid_velocity, hydraulic_diameter, fluid_density, solid_density, solid_loading):
     #fluid_velocity:ft/s   hydraulic_diameter:in    solid_density,fluid_density,solid_loading:ppg(a)  output:cP
-    #SPE 19771 - multiply result by base fluid viscosity
+    #SPE 19771 & SPE 104253 - multiply result by base fluid viscosity
     c = solid_loading / (solid_density + solid_loading)
     shear_rate = 12 * 8 * fluid_velocity / hydraulic_diameter
-    relative_viscosity = (1 + (0.75 * (math.exp(1.5 * nPrime) - 1) * math.exp(-(1 - nPrime) * shear_rate / 1000)) * (1.25 * c/ (1 - 1.5 * c))) ** 2
+    relative_viscosity = (1 + (0.75 * (math.exp(1.5 * nPrime) - 1) * math.exp(-(1 - nPrime) * shear_rate / 1000)) * (1.25 * c / (1 - 1.5 * c))) ** 2
     relative_density = (1 + solid_loading / fluid_density) / (1 + solid_loading / solid_density)
-    calc_slurry_viscosity_keck = relative_viscosity ** 0.55 * relative_density ** 0.45
-    return calc_slurry_viscosity_keck
+    slurry_viscosity_keck = relative_viscosity ** 0.55 * relative_density ** 0.45
+    
+    #slurry_viscosity_keck = (1 + solid_loading / fluid_density) / (1 + solid_loading / solid_density)
+    
+    #slurry_viscosity_mult = relative_viscosity ** 0.6 * relative_density ** 0.4    #laminar
+    #slurry_viscosity_mult = relative_viscosity ** 0.5 * relative_density ** 0.5    #transition
+    #slurry_viscosity_mult = relative_viscosity ** 0.2 * relative_density ** 0.8    #turbulent
+    return slurry_viscosity_keck
 
 def calc_slurry_viscosity(solid_loading, solid_density, fluid_density):  
     #solid_density,fluid_density,solid_loading:ppg   hydraulic_diameter:in   output:cP
     #generalized collection. multiply result by base fluid viscosity
-    
     c = solid_loading / (solid_density + solid_loading)
     #relative_viscosity = 1 + 2.5 * c                                    #Einstein
+    #relative_viscosity = math.exp(2.7 * c / (1 - S * c))                #AT, S = 1.5-1.7
+    relative_viscosity = (1 + 2.61 * (1.25 * c) / (1 - 1.5 * c)) ** 2    #AT
+    
     #cmax = 0.58     #42% porosity
     #relative_viscosity = 1 / (1 - c / cmax) ** (2.5 * nPrime)           #Nolte 1988
     #relative_viscosity = 1 / (1 - c / cmax) ** (2.5 * cmax)             #Krieger-Dogherty (Hackley and Ferraris, 2001)
-    #relative_viscosity = exp(2.7 * c / (1 - S * c))                     #Tallin, S = 1.5-1.7
-    relative_viscosity = (1 + 2.61 * (1.25 * c) / (1 - 1.5 * c)) ** 2    #Tallin
-    #relative_viscosity ** 0.6 * relative_density ** 0.4    #laminar
-    #relative_viscosity ** 0.5 * relative_density ** 0.5    #transition
-    #relative_viscosity ** 0.2 * relative_density ** 0.8    #turbulent
-    
-    #shear_rate = 12 * 8 * fluid_velocity / hydraulic_diameter
-    #relative_viscosity = (1 + (0.75 * (exp(1.5 * nPrime) - 1) * exp(-(1 - nPrime) * shear_rate / 1000)) * (1.25 * c / (1 - 1.5 * c))) ** 2     #Keck
-
-    relative_density = (1 + solid_loading / fluid_density) / (1 + solid_loading / solid_density)
-    calc_slurry_viscosity = relative_viscosity ** 0.55 * relative_density ** 0.45   #SPE 104253
-    return calc_slurry_viscosity
+    return relative_viscosity
 
 def calc_NRe_newton(fluid_velocity, hydraulic_diameter, fluid_density, fluid_viscosity):
     #fluid_velocity:ft/s  hydraulic_diameter:in     fluid_density:ppg     fluid_viscosity:cP
-    _CONST = 927.687
-    calc_NRe_newton = _CONST * fluid_velocity * hydraulic_diameter * fluid_density / fluid_viscosity
-    return calc_NRe_newton
+    _CONST = 927.6866
+    NRe_newton = _CONST * fluid_velocity * hydraulic_diameter * fluid_density / fluid_viscosity
+    return NRe_newton
 
 def calc_NRe_power(fluid_velocity, hydraulic_diameter, fluid_density, nPrime, kPrime):
     #fluid_velocity:ft/s  hydraulic_diameter:in     fluid_density:ppg     kPrime:lbf-s**n/ft2
     #KPrime here is from concentric cylinder test. it is not the same as the generalized K
     _CONST = 7.48052 / 32.2 / 12 ** nPrime
-    calc_NRe_power = _CONST * hydraulic_diameter ** nPrime * fluid_velocity ** (2 - nPrime) * fluid_density / ((kPrime * 8 ** (nPrime - 1)) * ((3 * nPrime + 1) / (4 * nPrime)) ** nPrime)
-    return calc_NRe_power
+    NRe_power = _CONST * hydraulic_diameter ** nPrime * fluid_velocity ** (2 - nPrime) * fluid_density / ((kPrime * 8 ** (nPrime - 1)) * ((3 * nPrime + 1) / (4 * nPrime)) ** nPrime)
+    return NRe_power
 
 def calc_friction_chen(hydraulic_diameter, NRe, roughness):
     #hydraulic_diameter, roughness:in
     #Fanning friction factor, Chen explicit solution
     #FrictionChen = 1 / 4 / (-2 * log10(e / 3.7065 - 5.0452 / NRe * log10(e ** 1.1098 / 2.8257 + 5.8506 / (NRe ** 0.8981)))) ** 2
     if NRe < 2100:
-        calc_friction_chen = 16 / NRe
+        friction_chen = 16 / NRe
     else:
         _e = roughness / hydraulic_diameter
-        calc_friction_chen = 1 / (-4 * math.log10(_e / 3.7065 - 5.0452 / NRe * math.log10(_e ** 1.1098 / 2.8257 + (7.149 / NRe) ** 0.8981))) ** 2
-    return calc_friction_chen
+        friction_chen = 1 / (-4 * math.log10(_e / 3.7065 - 5.0452 / NRe * math.log10(_e ** 1.1098 / 2.8257 + (7.149 / NRe) ** 0.8981))) ** 2
+    return friction_chen
 
 def calc_friction_colebrook(hydraulic_diameter, NRe, roughness):    
     #hydraulic_diameter, roughness:in
     #Fanning friction factor, Colebrook-White implicit solution
     #FrictionColebrook = 1 / (f ** 0.5) + 4 * log10(e / 3.7065 + 1.2613 / (NRe * (f ** 0.5)))
     if NRe < 2100:
-        calc_friction_colebrook = 16 / NRe
+        friction_colebrook = 16 / NRe
     else:
         _e = roughness / hydraulic_diameter
         #Newton-Raphson solution
@@ -160,24 +157,24 @@ def calc_friction_colebrook(hydraulic_diameter, NRe, roughness):
             ff2 = 1 / ((f0 + dF) ** 0.5) + 4 * math.log10(_e / 3.7065 + 1.2613 / (NRe * ((f0 + dF) ** 0.5)))
             f1 = f0 - ff1 / ((ff2 - ff1) / dF)
             f01 = abs(f1 - f0)
-    calc_friction_colebrook = f1
-    return calc_friction_colebrook
+        friction_colebrook = f1
+    return friction_colebrook
 
 def calc_friction_power_explicit(NRe, nPrime):         
     #Fanning friction factor, power law from Economides
     if NRe < 2100:
-        calc_friction_power_explicit = 16 / NRe
+        friction_power_explicit = 16 / NRe
     else:
         _B = (1.4 - math.log10(nPrime)) / 7
         c = (math.log10(nPrime) + 2.5) / 50
-        calc_friction_power_explicit = c / NRe ** _B
-    return calc_friction_power_explicit
+        friction_power_explicit = c / NRe ** _B
+    return friction_power_explicit
     
 def calc_friction_power_implicit(NRe, nPrime):        
     #Fanning friction factor, power law from SPE handbook
     #calc_friction_power_implicit = 1 / f ** 0.5 - ((4 / nPrime ** 0.75) * log10(NRe * f ** (1 - nPrime / 2)) - 0.4 / nPrime ** 1.2)
     if NRe < (3250 - 1150 * nPrime):
-        calc_friction_power_implicit = 16 / NRe
+        friction_power_implicit = 16 / NRe
     else:
     #Newton-Raphson solution
         f1 = 0.00001
@@ -190,8 +187,8 @@ def calc_friction_power_implicit(NRe, nPrime):
             f1 = f0 - ff1 / ((ff2 - ff1) / dF)
             f01 = abs(f1 - f0)
         
-    calc_friction_power_implicit = f1
-    return calc_friction_power_implicit
+    friction_power_implicit = f1
+    return friction_power_implicit
     
 def calc_standoff(tubing_diameter, casing_diameter, centralizer_diameter, blade_count):
     angle = math.pi / blade_count
@@ -199,28 +196,28 @@ def calc_standoff(tubing_diameter, casing_diameter, centralizer_diameter, blade_
     #both standoff2 are correct, just different forms. http://mathworld.wolfram.com/CircularSegment.html
     #standoff2 = (2 * casing_diameter / 2 - ((2 * casing_diameter / 2) ** 2 - 4 * (centralizer_diameter / 2 * sin(angle)) ** 2) ** 0.5) / 2
     standoff2 = casing_diameter / 2 - ((casing_diameter / 2) ** 2 - (centralizer_diameter / 2 * math.sin(angle)) ** 2) ** 0.5
-    calcStandoff = standoff1 + standoff2
-    return calcStandoff
+    standoff = standoff1 + standoff2
+    return standoff
 
 def calc_eccentricity(tubing_diameter, casing_diameter, standoff_radius):
     #range from 0 (fully concentric) to 1 (fully eccentric)
     #standoff_radius is used instead of centralizer_diameter because the standoff on a bladed centralizer will be less. See calc_standoff
     if standoff_radius < 0:
-        calc_eccentricity = 1
+        eccentricity = 1
     else: 
-        calc_eccentricity = (casing_diameter / 2 - (standoff_radius + tubing_diameter / 2)) / (casing_diameter / 2 - tubing_diameter / 2)
-        #calc_eccentricity = (casing_diameter - (centralizer_diameter) / (casing_diameter - tubing_diameter)
-    return calc_eccentricity
+        eccentricity = (casing_diameter / 2 - (standoff_radius + tubing_diameter / 2)) / (casing_diameter / 2 - tubing_diameter / 2)
+        #eccentricity = (casing_diameter - (centralizer_diameter) / (casing_diameter - tubing_diameter)
+    return eccentricity
 
 def calc_eccentricity_factor(tubing_diameter, casing_diameter, eccentricity):  
     #SPE 31147
     #This is multiplied by Dh, per paper Deff = S*Dh. Two different solutions for eccentricity are provided in the versions of the papers
     if eccentricity == 0:
-        calc_eccentricity_factor = 0.66667
+        eccentricity_factor = 0.66667
     else:
-        #calc_eccentricity_factor = 4.33 + (tubing_diameter / casing_diameter) * (10.54 * tubing_diameter / casing_diameter - 12.26)
-        calc_eccentricity_factor = 1.004 + 1.873 * (tubing_diameter / casing_diameter) - 1.826 * (tubing_diameter / casing_diameter) ** 2 + 0.617 * (tubing_diameter / casing_diameter) ** 3
-    return calc_eccentricity_factor
+        #eccentricity_factor = 4.33 + (tubing_diameter / casing_diameter) * (10.54 * tubing_diameter / casing_diameter - 12.26)
+        eccentricity_factor = 1.004 + 1.873 * (tubing_diameter / casing_diameter) - 1.826 * (tubing_diameter / casing_diameter) ** 2 + 0.617 * (tubing_diameter / casing_diameter) ** 3
+    return eccentricity_factor
     
 def calc_eccentricity_factor_powerlaw(nPrime, kPrime, NRe, tubing_diameter, casing_diameter, eccentricity):  
     #this is multiplied by f or dP
@@ -228,16 +225,16 @@ def calc_eccentricity_factor_powerlaw(nPrime, kPrime, NRe, tubing_diameter, casi
     if nPrime > 0:  #check for error
         if NRe < (3250 - 1150 * nPrime):
             #Haciislamoglu & Langlinais, 1990 - as described in SPE 111514
-            calc_eccentricity_factor_powerlaw = 1 - (0.072 * eccentricity / nPrime * diameter_ratio ** 0.8454) - (1.5 * eccentricity ** 2 * math.sqrt(nPrime) * diameter_ratio ** 0.1852) + (0.96 * eccentricity ** 3 * math.sqrt(nPrime) * diameter_ratio ** 0.2527)
+            eccentricity_factor_powerlaw = 1 - (0.072 * eccentricity / nPrime * diameter_ratio ** 0.8454) - (1.5 * eccentricity ** 2 * math.sqrt(nPrime) * diameter_ratio ** 0.1852) + (0.96 * eccentricity ** 3 * math.sqrt(nPrime) * diameter_ratio ** 0.2527)
             #error in below originally?
-            #calc_eccentricity_factor_powerlaw = 1 - (0.072 * eccentricity / nPrime * kPrime ** 0.8454) - (1.5 * eccentricity ** 2 * sqrt(nPrime) * kPrime ** 0.1852) + (0.96 * eccentricity ** 3 * sqrt(nPrime) * kPrime ** 0.2527)
-            #calc_eccentricity_factor_powerlaw = 1 - (0.1019 * eccentricity * nPrime *)
+            #eccentricity_factor_powerlaw = 1 - (0.072 * eccentricity / nPrime * kPrime ** 0.8454) - (1.5 * eccentricity ** 2 * sqrt(nPrime) * kPrime ** 0.1852) + (0.96 * eccentricity ** 3 * sqrt(nPrime) * kPrime ** 0.2527)
+            #eccentricity_factor_powerlaw = 1 - (0.1019 * eccentricity * nPrime *)
         else:
             #Aadnoy, Cooper, Miska, Mitchel, & Payne, 2009 
-            calc_eccentricity_factor_powerlaw = 1 - (0.048 * eccentricity / nPrime * kPrime ** 0.8454) - (0.67 * eccentricity ** 2 * math.sqrt(nPrime) * kPrime ** 0.1852) + (0.28 * eccentricity ** 3 * math.sqrt(nPrime) * kPrime ** 0.2527) 
+            eccentricity_factor_powerlaw = 1 - (0.048 * eccentricity / nPrime * kPrime ** 0.8454) - (0.67 * eccentricity ** 2 * math.sqrt(nPrime) * kPrime ** 0.1852) + (0.28 * eccentricity ** 3 * math.sqrt(nPrime) * kPrime ** 0.2527) 
     else: 
-        calc_eccentricity_factor_powerlaw = 1
-    return calc_eccentricity_factor_powerlaw
+        eccentricity_factor_powerlaw = 1
+    return eccentricity_factor_powerlaw
     
     
     
@@ -249,42 +246,42 @@ def calc_eccentricity_factor_powerlaw(nPrime, kPrime, NRe, tubing_diameter, casi
 def calc_DPpe(fluid_density, length, angle):
     #fluid_density:ppg    angle:deg   length:ft   output:psi
     #pressure drop due to potential energy change
-    #_CONST = 0.001615
-    #calcDPpe = GRAVITY_CONSTANT * _CONST * fluid_density * length * cos(angle * pi / 180)
-    _CONST = 0.052
-    calc_DPpe = _CONST * fluid_density * length * math.cos(angle * math.pi / 180)
-    return calc_DPpe
+    _CONST = 0.001615
+    DPpe = GRAVITY_CONSTANT * _CONST * fluid_density * length * math.cos(angle * math.pi / 180)
+    #_CONST = 0.052
+    #DPpe = _CONST * fluid_density * length * math.cos(angle * math.pi / 180)
+    return DPpe
 
 def calc_DPke(fluid_density, fluid_velocity_inlet, fluid_velocity_outlet, Cd):    
-    #fluid_density:ppg    fluid_velocityInlet,fluid_velocityOutlet:ft/s    output:psi
+    #fluid_density:ppg    fluid_velocity_inlet,fluid_velocity_utlet:ft/s    output:psi
     #pressure drop due to kinetic energy change
     _CONST = 0.0016146
-    calcDPke = _CONST * fluid_density / (Cd * 2) * (fluid_velocity_outlet ** 2 - fluid_velocity_inlet ** 2)
-    return calcDPke
+    DPke = _CONST * fluid_density / (Cd * 2) * (fluid_velocity_outlet ** 2 - fluid_velocity_inlet ** 2)
+    return DPke
 
 def calc_DPf(friction_factor, fluid_density, fluid_velocity, hydraulic_diameter, length):
     #fluid_density:ppg    fluid_velocity:ft/s   hydraulic_diameter:in     length:ft    output:psi
     #pressure drop due to friction
     _CONST = 0.01938
-    calcDPf = _CONST * 2 * friction_factor * fluid_density * length * fluid_velocity ** 2 / hydraulic_diameter
-    return calcDPf
+    DPf = _CONST * 2 * friction_factor * fluid_density * length * fluid_velocity ** 2 / hydraulic_diameter
+    return DPf
 
-def calc_DPfFull(model, fluid_density, fluid_viscosity, fluid_velocity, hydraulic_diameter, length, eccentricity, roughness, nPrime = 1, kPrime = 0.0000208854342245726):
+def calc_DPf_full(model: str, fluid_density, fluid_viscosity, fluid_velocity, hydraulic_diameter, length, eccentricity, roughness, nPrime = 1, kPrime = 0.0000208854342245726):
     #fluid_density:ppg    fluid_viscosity:cP   fluid_velocity:ft/s   hydraulic_diameter,roughness:in     length:ft    output:psi
     #pressure drop due to friction, selects model type
     if model == "Newtonian":
         kPrime = calc_kPrime(nPrime, fluid_viscosity, 170)
         NRe = calc_NRe_newton(fluid_velocity, hydraulic_diameter, fluid_density, fluid_viscosity)
         fluid_friction = calc_friction_colebrook(hydraulic_diameter, NRe, roughness)
-#        fluidFriction = calcFrictionChen(hydraulic_diameter, NRe, roughness)
+        #fluidFriction = calcFrictionChen(hydraulic_diameter, NRe, roughness)
     elif model == "Power Law":
         NRe = calc_NRe_power(fluid_velocity, hydraulic_diameter, fluid_density, nPrime, kPrime)
         fluid_friction = calc_friction_power_explicit(NRe, nPrime)
-#        fluid_friction = calc_friction_power_implicit(NRe, nPrime)
+        #fluid_friction = calc_friction_power_implicit(NRe, nPrime)
     
-    _CONST = 0.01938         #constant to convert units. Needs to be here since we calculated NRe, friction and eccentricity
-    calc_DPfFull = _CONST * 2 * fluid_friction * fluid_density * length * fluid_velocity ** 2 / hydraulic_diameter * calc_eccentricity_factor_powerlaw(nPrime, kPrime, NRe, eccentricity)
-    return calc_DPfFull
+    _CONST = 0.01938         #needs to be here since we calculated NRe, friction and eccentricity
+    DPf_full = _CONST * 2 * fluid_friction * fluid_density * length * fluid_velocity ** 2 / hydraulic_diameter * calc_eccentricity_factor_powerlaw(nPrime, kPrime, NRe, eccentricity)
+    return DPf_full
 
 
 
@@ -384,34 +381,79 @@ def calc_angle_correction(inclination):
     calc_angle_correction = 0.022 * inclination - 0.9793                #Hang model
     return calc_angle_correction
 
-def calc_horizontal_transport_Oroskar(hydraulic_diameter, solid_diameter, solid_density, fluid_density, fluid_viscosity, c, x,
-    _CONSTY = 1.85,  _CONSTn1 = 0.1536,  _CONSTn2 = 0.3564,  _CONSTn3= 0.378 ,  _CONSTn4 = 0.09,  _CONSTn5 = 0.3): #Oroskar Solution
+def calc_horizontal_transport_Oroskar(casing_ID, solid_diameter, solid_density, fluid_density, fluid_viscosity, c, 
+                                      x = 0.95, _CONSTY = 1.85,  _CONSTn1 = 0.1536,  _CONSTn2 = 0.3564,  _CONSTn3 = -0.378 ,  _CONSTn4 = 0.09,  _CONSTn5 = 0.3):
+    #solid_density,fluid_density:ppg      casing_ID,solid_diameter:in     fluid_viscosity:cP    output:ft/s
+    #c: solids concentration, loading/(loading+density)
+    #for non-concentric flow
+    _CONST1 = math.sqrt(1/12)   #constant, sqrt(1/12)
+    _CONST2 = 927.6866          #constant for modified NRe to multiply by ft/s. See calc_NRe_newton function
+
+    horizontal_transport_Oroskar = _CONST1 * math.sqrt(GRAVITY_CONSTANT * solid_diameter * (solid_density / fluid_density - 1)) * \
+        _CONSTY * c ** _CONSTn1 * \
+        (1 - c) ** _CONSTn2 * \
+        (solid_diameter / casing_ID) ** _CONSTn3 * \
+        (_CONST1 * _CONST2 * casing_ID * fluid_density / fluid_viscosity * math.sqrt(GRAVITY_CONSTANT * solid_diameter * (solid_density / fluid_density - 1))) ** _CONSTn4 * \
+        x ** _CONSTn5
+    return horizontal_transport_Oroskar
+
+def calc_horizontal_transport_OroskarMod(hydraulic_diameter, solid_diameter, solid_density, fluid_density, fluid_viscosity, c, 
+                                      x = 0.95, _CONSTY = 1.85,  _CONSTn1 = 0.1536,  _CONSTn2 = 0.3564,  _CONSTn3 = -0.378 ,  _CONSTn4 = 0.09,  _CONSTn5 = 0.3):
     #solid_density,fluid_density:ppg      hydraulic_diameter,solid_diameter:in     fluid_viscosity:cP    output:ft/s
     #c: solids concentration, loading/(loading+density)
-    _CONST1 = 0.2886751346   #constant
-    _CONST2 = 1.6538760499   #constant for modified Re
+    #modified Oroskar for gravel packing
+    _CONST1 = math.sqrt(1/12)   #constant, sqrt(1/12)
+    _CONST2 = 927.6866          #constant for modified NRe to multiply by ft/s. See calc_NRe_newton function
+     
+    #_CONSTY = 3.52, _CONSTn1 = -0.111, _CONSTn2 = -2.97, _CONSTn3 = -0.357, _CONSTn4 = -0.0595, _CONSTn5 = 0.3         #updated constants from regression fit, uncomment to compare
+            
+    horizontal_transport_OroskarMod = _CONST1 * math.sqrt(GRAVITY_CONSTANT * solid_diameter * (solid_density / fluid_density - 1)) * \
+        _CONSTY * c ** _CONSTn1 * \
+        (1 - c) ** _CONSTn2 * \
+        (solid_diameter / hydraulic_diameter) ** _CONSTn3 * \
+        (_CONST1 * _CONST2 * hydraulic_diameter * fluid_density / fluid_viscosity * math.sqrt(GRAVITY_CONSTANT * solid_diameter * (solid_density / fluid_density - 1))) ** _CONSTn4 * \
+        x ** _CONSTn5
+    return horizontal_transport_OroskarMod
 
-    if _CONSTY == 0:
-    #Newtonian & Power Law
-        _CONSTY = 1.85      #experimentally derive this for power law
-        _CONSTn1 = 0.1536
-        _CONSTn2 = 0.3564
-        _CONSTn3 = 0.378    #experimentally derive this for power law
-        _CONSTn4 = 0.09     #experimentally derive this for power law
-        _CONSTn5 = 0.3
+def calc_horizontal_transport_SGS(equivalent_diameter, solid_diameter, solid_density, fluid_density, fluid_viscosity, c, dune_height, hole_diameter, 
+                                    _CONSTY = 3.445, _CONSTn1 = -3.743, _CONSTn2 = 0.3075, _CONSTn3 = 0.065):
+    #solid_density,fluid_density:ppg      equivalent_diameter,solid_diameter,hole_diameter:in     viscosity:cP  height:height of dune    output:ft/s
+    #c: solids concentration, loading/(loading+density)
+    _CONST1 = 1 #math.sqrt(1/12)   #constant, sqrt(1/12)
+    _CONST2 = 927.6866          #constant for modified NRe to multiply by ft/s. See calc_NRe_newton function
+              
+    horizontal_transport_SGS = _CONST1 * math.sqrt(GRAVITY_CONSTANT * solid_diameter * (solid_density / fluid_density - 1)) * \
+        _CONSTY * (1 - c) ** _CONSTn1 * \
+        (solid_diameter / equivalent_diameter * (1 - dune_height / hole_diameter)) ** _CONSTn2 *  \
+        (_CONST1 * _CONST2 * equivalent_diameter * fluid_density / fluid_viscosity * math.sqrt(GRAVITY_CONSTANT * solid_diameter * (solid_density / fluid_density - 1))) ** _CONSTn3
+    return horizontal_transport_SGS
 
-    #calc_horizontal_transport_Oroskar = sqrt(GRAVITY_CONSTANT * (solid_diameter / 12) * (solid_density / fluid_density - 1)) * _
-        #1.85 * c ** 0.1536 * (1 - c) ** 0.3564 * (hydraulic_diameter / solid_diameter) ** 0.378 * _
-        #(928 * hydraulic_diameter * fluid_density * sqrt(GRAVITY_CONSTANT * (solid_diameter / 12) * (solid_density / fluid_density - 1)) / fluid_viscosity) ** 0.09 * x ** 0.3
+def calc_horizontal_transport_SGSl_alt(equivalent_diameter, solid_diameter, solid_density, fluid_density, fluid_viscosity, c, bed_width, wetted_perimeter, 
+                                    _CONSTY = 1.15915872803019, _CONSTn1 = -3.58822426562324, _CONSTn2 = 0.377485123473551, _CONSTn3 = -0.272080143824705, _CONSTn4 = 0.05439676041480):
+    #solid_density,fluid_density:ppg      hydraulic_diameter,solid_diameter,hole_diameter:in     viscosity:cP  height:height of dune    output:ft/s
+    #c: solids concentration, loading/(loading+density)
+    _CONST1 = math.sqrt(1/12)   #constant, sqrt(1/12)
+    _CONST2 = 927.6866          #constant for modified NRe to multiply by ft/s. See calc_NRe_newton function
+   
+    horizontal_transport_SGS_alt = _CONST1 * math.sqrt(GRAVITY_CONSTANT * solid_diameter * (solid_density / fluid_density - 1)) * \
+        _CONSTY * (1 - c) ** _CONSTn1 * \
+        (equivalent_diameter / solid_diameter) **_CONSTn2  * \
+        max(bed_width / wetted_perimeter, 0.05) ** _CONSTn3 * \
+        (_CONST1 * _CONST2 * equivalent_diameter * fluid_density / fluid_viscosity * math.sqrt(GRAVITY_CONSTANT * solid_diameter * (solid_density / fluid_density - 1))) ** _CONSTn4
+    return horizontal_transport_SGS_alt
 
-    #calc_horizontal_transport_Oroskar = _CONST1 * sqrt(GRAVITY_CONSTANT * (solid_diameter) * (solid_density / fluid_density - 1)) * _
-        #1.85 * c ** 0.1536 * (1 - c) ** 0.3564 * (hydraulic_diameter / solid_diameter) ** 0.378 * _
-        #_CONST2 * (hydraulic_diameter * fluid_density * sqrt(GRAVITY_CONSTANT * (solid_diameter) * (solid_density / fluid_density - 1)) / fluid_viscosity) ** 0.09 * x ** 0.3
+def calc_horizontal_transport_Hang(hydraulic_diameter, solid_diameter, solid_density, fluid_density, slurryDensity, fluid_viscosity):
+    #hydraulic_diameter:in   solid_diameter:in   solid_density:ppg    fluid_density:ppg   slurryDensity:ppg   fluid_viscosity:cP    output:ft/s
+    _CONST1 = 9.912
+    _CONST2 = 0.289
 
-    calc_horizontal_transport_Oroskar = _CONST1 * math.sqrt(GRAVITY_CONSTANT * (solid_diameter) * (solid_density / fluid_density - 1)) * \
-        _CONSTY * c ** _CONSTn1 * (1 - c) ** _CONSTn2 * (hydraulic_diameter / solid_diameter) ** _CONSTn3 * _CONST2 * \
-        (hydraulic_diameter * fluid_density * math.sqrt(GRAVITY_CONSTANT * (solid_diameter) * (solid_density / fluid_density - 1)) / fluid_viscosity) ** _CONSTn4 * x ** _CONSTn5
-    return calc_horizontal_transport_Oroskar
+    V1 = _CONST1 * (0.0251 * GRAVITY_CONSTANT * solid_diameter * (solid_density / fluid_density - 1) * ((hydraulic_diameter * slurryDensity) / fluid_viscosity) ** 0.775) ** 0.816
+    V2 = _CONST2 * (1.35 * 2 * GRAVITY_CONSTANT * hydraulic_diameter * (solid_density / fluid_density - 1)) ** 0.5
+    if V1 > V2:
+        horizontal_transport_Hang = V1
+    else: 
+        horizontal_transport_Hang = V2
+    return horizontal_transport_Hang
 
 def calc_horizontal_transport_SPE(hydraulic_diameter, solid_diameter, solid_density, fluid_density, fluid_viscosity): 
     #solid_density,fluid_density:ppg      hydraulic_diameter,solid_diameter:in     fluid_viscosity:cP      output:ft/s
@@ -419,8 +461,8 @@ def calc_horizontal_transport_SPE(hydraulic_diameter, solid_diameter, solid_dens
     _CONST = 3.281
     d1 = math.pi / 6 * solid_diameter * (solid_density - fluid_density) * GRAVITY_CONSTANT * (2 * fluid_viscosity / fluid_density) ** 0.5
     d2 = 162.4 * fluid_viscosity / hydraulic_diameter * (2 - solid_diameter / hydraulic_diameter) * (solid_diameter / hydraulic_diameter) * (hydraulic_diameter - solid_diameter) ** 0.5
-    calc_horizontal_transport_SPE = _CONST * (d1 / d2) ** (2 / 3)
-    return calc_horizontal_transport_SPE
+    horizontal_transport_SPE = _CONST * (d1 / d2) ** (2 / 3)
+    return horizontal_transport_SPE
 
 
 
@@ -430,38 +472,44 @@ def calc_horizontal_transport_SPE(hydraulic_diameter, solid_diameter, solid_dens
 #*************************************************************************
 #GRAVEL PACK SLURRY EQUATIONS
 #*************************************************************************
-def calc_clean_volume(slurry_volume, absVol, solid_loading, solid_loading_end=0):
-#slurry_volume,sandVolume:ft3    bulkDensity:lbm/ft3  solid_loading:ppg     output:gal
-#can also be used for clean volume add rate (gal/min) when using proppant feed rate (ft3/min)
-#    calc_clean_volume = sand_volume * bulkDensity / solid_loading
-    if solid_loadingEnd == 0: 
-        solid_loadingEnd = solid_loading
-    calc_clean_volume = slurry_volume / (1 + absVol * (solid_loading + solid_loading_end) / 2)
-    return calc_clean_volume
+def calc_clean_volume(slurry_volume, solid_absVol, solid_loading, solid_loading_end=0):
+    #slurry_volume,sandVolume:ft3    bulkDensity:lbm/ft3  solid_absVol:gal/lbm  solid_loading:ppg     output:gal
+    #can also be used for clean volume add rate (gal/min) when using proppant feed rate (ft3/min)
+    #clean_volume = sand_volume * bulkDensity / solid_loading
+    if solid_loading_end == 0: 
+        solid_loading_end = solid_loading
+    clean_volume = slurry_volume / (1 + solid_absVol * (solid_loading + solid_loading_end) / 2)
+    return clean_volume
 
-def calc_slurry_volume(clean_volume, absVol, solid_loading, solid_loading_end=0):
-#cleanVolume:volume    absVol:gal/lbm   solid_loading:ppg     output:volume
-    if solid_loadingEnd == 0: 
-        solid_loadingEnd = solid_loading
-    calc_slurry_volume = clean_volume * (1 + absVol * (solid_loading + solid_loading_end) / 2)
-    return calc_slurry_volume
+def calc_slurry_volume(clean_volume, solid_absVol, solid_loading, solid_loading_end=0):
+    #cleanVolume:volume    solid_absVol:gal/lbm   solid_loading:ppg     output:volume
+    if solid_loading_end == 0: 
+        solid_loading_end = solid_loading
+    slurry_volume = clean_volume * (1 + solid_absVol * (solid_loading + solid_loading_end) / 2)
+    return slurry_volume
 
-def calc_slurry_density(clean_density, absVol, solid_loading):
-#clean_density:ppg   absVol:gal/lbm   solid_loading:ppga   output:ppg
-    calc_slurry_density = (clean_density + solid_loading) / (1 + absVol * solid_loading)
-    return calc_slurry_density
+def calc_slurry_density(clean_density, solid_absVol, solid_loading):
+#clean_density:ppg   solid_absVol:gal/lbm   solid_loading:ppga   output:ppg
+    slurry_density = (clean_density + solid_loading) / (1 + solid_absVol * solid_loading)
+    return slurry_density
 
-def calc_proppant_mass(slurry_volume, absVol, solid_loading, solid_loading_end=0):
-#slurry_volume:gal   absVol:gal/lbm   solid_loading:ppga   #output:lbm
-#can also be used for proppant mass add rate (lbm/min) when using slurry rate (gal/min)
+def calc_proppant_mass(slurry_volume, solid_absVol, solid_loading, solid_loading_end=0):
+    #slurry_volume:gal   solid_absVol:gal/lbm   solid_loading:ppga   #output:lbm
+    #can also be used for proppant mass add rate (lbm/min) when using slurry rate (gal/min)
     _CONST = 1
-    if solid_loadingEnd == 0: 
-        solid_loadingEnd = solid_loading
-    calc_proppant_mass = _CONST * slurry_volume / (1 / ((solid_loading + solid_loading_end) / 2) + absVol)
-    return calc_proppant_mass
+    if solid_loading_end == 0: 
+        solid_loading_end = solid_loading
+    proppant_mass = _CONST * slurry_volume / (1 / ((solid_loading + solid_loading_end) / 2) + solid_absVol)
+    return proppant_mass
 
-def create_Nolte_schedule(fluid_efficiency, solid_loading, absVol, proppant_mass):
-#solid_loading:ppga  absVol:gal/lbm  proppant_mass:lbm
+def calc_solids_concentration(solid_density, solid_loading):
+    #solid_loading,solid_density:ppg(a)
+    #commonly used for solids fraction in transport equations as c
+    solids_concentration = solid_density / (solid_density + solid_loading)
+    return solids_concentration
+
+def create_Nolte_schedule(fluid_efficiency, solid_loading, solid_absVol, solid_mass):
+    #solid_loading:ppga  absVol:gal/lbm  solid_mass:lbm
 
     pad_fraction = (1 - fluid_efficiency) ** 2
     #padFraction = (1 - fluid_efficiency) / (1 + fluid_efficiency)
@@ -489,22 +537,22 @@ def create_Nolte_schedule(fluid_efficiency, solid_loading, absVol, proppant_mass
     #Mass Proppant in a stage = dT * TotalSlurry / (1/PPGA + absVol) * (PPGA/PPGA). To avoid error at 0 PPGA multiply by PPGA/PPGA
     exitConverged = 1
     loopCounter = 1
-    total_slurry_volume = proppant_mass / 100
+    total_slurry_volume = solid_mass / 100
     d_total_slurry_volume = 1
     while abs(exitConverged) > 0.1 and loopCounter < 1000:
         total_sand_mass1 = 0
         total_sand_mass2 = 0     
         sand_mass = []
         for i in range(solid_loading + 2):
-            sand_mass.append((relative_time[i] - relative_time[i - 1]) * total_slurry_volume * proppant_concentration[i] / (1 + proppant_concentration[i] * absVol))
+            sand_mass.append((relative_time[i] - relative_time[i - 1]) * total_slurry_volume * proppant_concentration[i] / (1 + proppant_concentration[i] * solid_absVol))
             total_sand_mass1 = total_sand_mass1 + sand_mass[i]
         sand_mass = []
         for i in range(solid_loading + 2):
-            sand_mass.append((relative_time[i] - relative_time[i - 1]) * (total_slurry_volume + d_total_slurry_volume) * proppant_concentration[i] / (1 + proppant_concentration[i] * absVol))
+            sand_mass.append((relative_time[i] - relative_time[i - 1]) * (total_slurry_volume + d_total_slurry_volume) * proppant_concentration[i] / (1 + proppant_concentration[i] * solid_absVol))
             total_sand_mass2 = total_sand_mass2 + sand_mass[i]
 
-        total_sand_mass1 = total_sand_mass1 - proppant_mass
-        total_sand_mass2 = total_sand_mass2 - proppant_mass
+        total_sand_mass1 = total_sand_mass1 - solid_mass
+        total_sand_mass2 = total_sand_mass2 - solid_mass
 
         totalSlurryVolume1 = total_slurry_volume - total_sand_mass1 / ((total_sand_mass2 - total_sand_mass1) / d_total_slurry_volume)
         exitConverged = totalSlurryVolume1 - total_slurry_volume
@@ -515,8 +563,8 @@ def create_Nolte_schedule(fluid_efficiency, solid_loading, absVol, proppant_mass
     output.append([0,total_slurry_volume * pad_fraction]) #/ (1 - pad_fraction)
     for i in range(1, solid_loading + 2):
         output.append([proppant_concentration[i],sand_mass[i] / proppant_concentration[i] * (1 + proppant_concentration[i] * absVol)])
-    create_Nolte_schedule = output[:]
-    return create_Nolte_schedule
+    Nolte_schedule = output[:]
+    return Nolte_schedule
 
 
 
@@ -579,7 +627,7 @@ def calc_perm_estimate(solid_diameter, porosity):  #Blake-Kozeny, SPE 31141
 def calc_fracture_rate(permeability, formation_height, frac_gradient, formation_TVD, fluid_density, fluid_viscosity, wellbore_ID, Bo, skin):
     #permeability:mD    formation_height,formation_TVD:ft  frac_gradient:psi/ft    fluid_density:ppg    fluid_viscosity:cP   wellbore_ID:in   Bo:stb/rb
     _CONST = 1 / 24 / 60
-    calc_fracture_rate = _CONST * calcDarcyIPR(permeability, formation_height, frac_gradient * formation_TVD, 0, fluid_density * formation_TVD * 0.052, Bo, fluid_viscosity, calc_shape_radial(500 * 12, wellbore_ID / 2, skin, "Pseudoradial"))
+    calc_fracture_rate = _CONST * calc_Darcy_IPR(permeability, formation_height, frac_gradient * formation_TVD, 0, fluid_density * formation_TVD * 0.052, Bo, fluid_viscosity, calc_shape_radial(500 * 12, wellbore_ID / 2, skin, "Pseudoradial"))
     return calc_fracture_rate
 
 def calc_injectivity_index(rate, pressure):
@@ -603,6 +651,16 @@ def calcEatonFracPermeable(overburdenPressure, porePressure, poissonsRatio, biot
 #overburdenPressure:psi     porePressure:psi    output:psi      #psi/ft can be used also but must be consistent!
     calcEatonFracPermeable = 2 * poissonsRatio * (overburdenPressure - biotNumber * porePressure) + biotNumber * porePressure
     return calcEatonFracPermeable
+
+def calcSGSClosure(overburdenPressure, porePressure):
+#overburdenPressure:psi     porePressure:psi
+    calcSGSClosure = 0.488 * (overburdenPressure - porePressure) + porePressure
+    return calcSGSClosure
+
+def calcSGSFrac(overburdenPressure, porePressure):
+#overburdenPressure:psi     porePressure:psi
+    calcSGSFrac = 0.6934 * (overburdenPressure - porePressure) + porePressure
+    return calcSGSFrac
 
 def calcOverburden(seawaterDensity, rockDensity, liquidDensity, formationDepth, seabedDepth, phi_0):    #from Applied Drilling Engineering
 #seawaterDensity, rockDensity, liquidDensity:ppg     formationDepth, seabedDepth:ft     output:psi
@@ -685,12 +743,12 @@ def calcOverburden(seawaterDensity, rockDensity, liquidDensity, formationDepth, 
     calcOverburden = 0.052 * (seawaterDensity * seabedDepth + rockDensity * bedThickness) - (rockDensity - liquidDensity) * 0.052 * phi_0 / k * (1 - math.exp(-k * bedThickness))
     return calcOverburden
 
-def calc_formation_mean_stress(overburden_pressure, closure_pressure, pore_pressure):      #from AWT/GWong
+def calc_formation_mean_stress(overburden_pressure, closure_pressure, pore_pressure):      #from GWong
     #overburden_pressure,closure_pressure,pore_pressure:psi/ft    output:psi
     calc_formation_mean_stress = (overburden_pressure + 2 * closure_pressure) / 3 - pore_pressure
     return calc_formation_mean_stress
 
-def calc_formation_Youngs_modulus(mean_stress):      #from AWT/GWong
+def calc_formation_Youngs_modulus(mean_stress):      #from GWong
     #mean_stress:psi     output:psi
     calc_formation_Youngs_modulus = 85.053 * mean_stress + 515477
     return calc_formation_Youngs_modulus
@@ -751,7 +809,7 @@ def calcNetPressureWidth(Youngs_modulus, poissons_ratio, characteristicLength, n
     if widthType == "max": gamma = 1
     else: gamma = math.pi / 4 * 0.75
     
-    planeStrainModulus = calcPlaneStrainModulus(Youngs_modulus, Poissons_ratio)
+    planeStrainModulus = calcPlaneStrainModulus(Youngs_modulus, poissons_ratio)
     
     if model == "PKN": fractureStiffness = _CONST * 2 * planeStrainModulus / math.pi / characteristicLength      #PKN, characteristicLength is height
     elif model == "KGD": fractureStiffness = _CONST * planeStrainModulus / math.pi / characteristicLength         #KGD, characteristicLength is length
@@ -842,8 +900,54 @@ def calcGdefTime(timeTotal, timePumped, alpha):
 #*************************************************************************
 #ALPHA BETA PACKING
 #*************************************************************************
+#Alpha-Beta calculations, Hang solution
+def calc_Cfunction(openhole_ID, dune_height):
+    #openhole_ID,dune_height:ft      output:ft2
+    Cfunction = 2 * math.sqrt(dune_height * (openhole_ID - dune_height))
+    return Cfunction
+
+def calc_Sfunction(openhole_ID, dune_height):
+    #openhole_ID,dune_height:ft      output:ft2
+    Sfunction = openhole_ID * math.acos((2 * dune_height - openhole_ID) / openhole_ID)
+    return Sfunction
+
+def calc_Gfunction(openhole_ID, dune_height):
+    #outer_diameter,dune_height:ft      output:ft2
+    Gfunction = 0.25 * (openhole_ID * calc_Sfunction(openhole_ID, dune_height) - (2 * dune_height - openhole_ID) * calc_Cfunction(openhole_ID, dune_height))
+    return Gfunction
+
+def calc_Pfunction(openhole_ID, dune_height, H1, H2, screen_OD):
+    #outer_diameter,dune_height,H1,H2,inner_diameter:in      output:in
+    if dune_height < H1: 
+        Pfunction = calc_Cfunction(openhole_ID, dune_height) + calc_Sfunction(openhole_ID, dune_height) + math.pi * screen_OD
+    elif dune_height > H2: 
+        Pfunction = calc_Cfunction(openhole_ID, dune_height) + calc_Sfunction(openhole_ID, dune_height)
+    else: 
+        Pfunction = calc_Cfunction(openhole_ID, dune_height) - calc_Cfunction(screen_OD, dune_height - H1) + calc_Sfunction(openhole_ID, dune_height) + calc_Sfunction(screen_OD, dune_height - H1)
+    return Pfunction
+
+def calc_Afunction(openhole_ID, dune_height, H1, H2, screen_OD):
+    #outer_diameter,dune_height,H1,H2,inner_diameter:in    output:in2
+    if dune_height < H1:
+        Afunction = calc_Gfunction(openhole_ID, dune_height) - math.pi / 4 * screen_OD ** 2
+    elif dune_height > H2:
+        Afunction = calc_Gfunction(openhole_ID, dune_height)
+    else:
+        Afunction = calc_Gfunction(openhole_ID, dune_height) - calc_Gfunction(screen_OD, dune_height - H1)
+    return Afunction 
+
+def calc_alphawave_DH_Hang(openhole_ID, screen_OD, centralizer_OD, dune_height_ratio):
+#openhole_ID, screen_OD, centralizer_OD:in    DHR:dimensionless       output:in
+    H1 = (centralizer_OD - screen_OD) / 2
+    H2 = H1 + screen_OD
+    dune_height = dune_height_ratio * openhole_ID
+    alphawave_DH_Hang = 4 * calc_Afunction(openhole_ID, dune_height, H1, H2, screen_OD) / calc_Pfunction(openhole_ID, dune_height, H1, H2, screen_OD)
+    return alphawave_DH_Hang
+    
+#****************************************************************
 def calc_tubing_dune_height(diameter, dune_height_ratio):     
     #height of dune in circular pipe. from Marks Standard Handbook, mechanics of fluids
+    #diameter:in    dune_height_ratio:dimensionless     output:in
     theta = 2 * math.acos(2 * dune_height_ratio - 1)
 
     if dune_height_ratio >= 0.5:
@@ -853,132 +957,37 @@ def calc_tubing_dune_height(diameter, dune_height_ratio):
 
     perimeter = (math.sin(theta / 2) + theta / 2) * diameter
     hydraulic_diameter = 4 * area / perimeter
+    equivalent_diameter = math.sqrt(4 * area / math.pi)
 
     output = []
-    output = [theta * 180 / math.pi, area, perimeter, hydraulic_diameter]
-    calc_tubing_dune_height = output[:]
-    return calc_tubing_dune_height
+    output = [theta * 180 / math.pi, area, perimeter, hydraulic_diameter, equivalent_diameter]
+    return output
 
 #Alpha-Beta Calculations
-def calc_alpha_wave_dune_height(outer_diameter, inner_diameter, centralizer_diameter, dune_height_ratio):
-    h = dune_height_ratio * outer_diameter
-
-    if (outer_diameter - inner_diameter) < (centralizer_diameter - inner_diameter):
-        g_i = (outer_diameter - inner_diameter) / 2
-    else:
-        g_i = (centralizer_diameter - inner_diameter) / 2
+def calc_alphawave_dune_height(casing_ID, screen_OD, centralizer_OD, dune_height_ratio):
+    #casing_ID, screen_OD, centralizer_OD,output:in
+    h = dune_height_ratio * casing_ID
+    g_i = min((casing_ID - screen_OD), (centralizer_OD - screen_OD)) / 2
     
-    if h > 0 and h < outer_diameter:
-        h_o = h
-    elif h > 0 and h > outer_diameter:
-        h_o = outer_diameter
+    h_o = min(max(h, 0), casing_ID)
+    h_i = min(max(h - g_i, 0), screen_OD)
     
-    if (h - g_i) > 0 and (h - g_i) < inner_diameter:
-        h_i = h - g_i
-    elif (h - g_i) > 0 and (h - g_i) > inner_diameter: 
-        h_i = inner_diameter
-    else:
-        h_i = 0
+    theta_o = 2 * math.asin((casing_ID - 2 * h_o) / casing_ID) + math.pi
+    theta_i = 2 * math.asin((screen_OD - 2 * h_i) / screen_OD) + math.pi
 
-    theta_i = 2 * math.asin((inner_diameter - 2 * h_i) / inner_diameter) + math.pi
-    theta_o = 2 * math.asin((outer_diameter - 2 * h_o) / outer_diameter) + math.pi
+    area_o = casing_ID ** 2 / 8 * (theta_o + math.sin(theta_o - math.pi))
+    area_i = screen_OD ** 2 / 8 * (theta_i + math.sin(theta_i - math.pi))
 
-    A_o = outer_diameter ** 2 / 8 * (theta_o + math.sin(theta_o - math.pi))
-    A_i = inner_diameter ** 2 / 8 * (theta_i + math.sin(theta_i - math.pi))
+    perimeter_o = casing_ID * theta_o / 2 + casing_ID * math.sin((theta_o - math.pi) / 2)
+    perimeter_i = screen_OD * theta_i / 2 - screen_OD * math.sin((theta_i - math.pi) / 2)
 
-    P_o = outer_diameter * theta_o / 2 + outer_diameter * math.cos((theta_o - math.pi) / 2)
-    P_i = inner_diameter * theta_i / 2 - inner_diameter * math.cos((theta_i - math.pi) / 2)
+    width_o = casing_ID * math.sin(theta_o - math.pi)/2
+    width_i = screen_OD * math.sin(theta_i - math.pi)/2
 
-    hydraulic_diameter = 4 * (A_o - A_i) / (P_o + P_i)
-    output = [hydraulic_diameter, A_o, A_i, P_o, P_i]
-    calc_alpha_wave_dune_height = output[:]
-    return calc_alpha_wave_dune_height
+    hydraulic_diameter = 4 * (area_o - area_i) / (perimeter_o + perimeter_i)
+    equivalent_diameter = math.sqrt(4 * (area_o - area_i) / math.pi)
 
-def calcAlphaWave(outerID, outerRoughness, innerOD, innerID, innerRoughness, centralizerOD, washpipeOD, washipipeID, washpipeRoughness, proppantDiameter, proppantDensity, solid_loading, absVol, fluid_density, fluid_viscosity, DHR, model):
-    #proppantDensity:SG
-        
-    #need to include as user variables eventually
-    nPrime = 1
-    kPrime = 0.00002088
-    eccentricityWP = (innerID - washpipeOD) / (innerID - washpipeOD)
-
-    duneHeight = DHR * outerID
-    hydraulic_diameter = calc_alpha_wave_dune_height(outerID, innerOD, centralizerOD, DHR)[0]
-    equivalentDiameter = math.sqrt(calc_alpha_wave_dune_height(outerID,innerOD, centralizerOD, DHR)[1]* 4 / math.pi)
-    solid_loadingOH = solid_loading + 0.1
-    c = solid_loadingOH / (proppantDensity * 8.34 + solid_loadingOH)
-    slurryViscosity = fluid_viscosity * calc_slurry_viscosity(solid_loadingOH, proppantDensity * 8.34, fluid_density)
-    slurryDensity = calc_slurry_density(fluid_density, absVol, solid_loadingOH)
-    
-    transportVelocity = calc_horizontal_transport_Oroskar(equivalentDiameter, proppantDiameter, proppantDensity * 8.34, fluid_density, fluid_viscosity, c, 1)
-        
-    screenOHRate = unit(transportVelocity * calc_alpha_wave_dune_height(outerID,innerOD, centralizerOD, DHR)[1] / 144, "ft3", "bbl") * 60
-    NRe = calc_NRe_newton(transportVelocity, hydraulic_diameter, slurryDensity, slurryViscosity)
-    frictionFactorAlpha = calc_friction_colebrook(hydraulic_diameter, NRe, outerRoughness)     #friction factor above dune
-    screenOHDP = calc_DPf(frictionFactorAlpha, slurryDensity, transportVelocity, hydraulic_diameter, 1)
-    
-    exitConverged = 1       #exits if converged
-    loopCounter = 1         #limits number of loops to prevent lockup
-    q1 = screenOHRate       #bpm
-    dq = 0.001              #bpm
-    while abs(exitConverged) > 0.01 and loopCounter < 100:
-        #first loop, q1
-        q = q1
-        NRe = calc_NRe_newton(calc_fluid_velocity(q, washpipeOD, innerID), innerID - washpipeOD, fluid_density, fluid_viscosity)
-        frictionFactorWPSCR = calc_friction_colebrook(innerID - washpipeOD, NRe, washpipeRoughness)
-        washpipeScreenDP1 = calc_DPf(frictionFactorWPSCR, fluid_density, calc_fluid_velocity(q, washpipeOD, innerID), innerID - washpipeOD, 1) * calc_eccentricity_factor_powerlaw(nPrime, kPrime, NRe, innerID, washpipeOD, eccentricityWP)
-        
-        #NRe = calcNReNewton(calcVelocity(q, washpipeOD, innerID), (innerID - washpipeOD) * calcEccentricityFactor(washpipeOD, innerID, "eccentric"), fluid_density, fluid_viscosity)
-        #frictionFactorWPSCR = calcFrictionColebrook((innerID - washpipeOD) * calcEccentricityFactor(washpipeOD, innerID, "eccentric"), NRe, washpipeRoughness)
-        #washpipeScreenDP1 = calcDPf(frictionFactorWPSCR, fluid_density, calcVelocity(q, washpipeOD, innerID), (innerID - washpipeOD) * calcEccentricityFactor(washpipeOD, innerID, "eccentric"), 1)
-        
-        #second loop, q2
-        q = q1 + dq
-        NRe = calc_NRe_newton(calc_fluid_velocity(q, washpipeOD, innerID), innerID - washpipeOD, fluid_density, fluid_viscosity)
-        frictionFactorWPSCR = calc_friction_colebrook(innerID - washpipeOD, NRe, washpipeRoughness)
-        washpipeScreenDP2 = calc_DPf(frictionFactorWPSCR, fluid_density, calc_fluid_velocity(q, washpipeOD, innerID), innerID - washpipeOD, 1) * calc_eccentricity_factor_powerlaw(nPrime, kPrime, NRe, innerID, washpipeOD, eccentricityWP)
-
-        #NRe = calcNReNewton(calcVelocity(q, washpipeOD, innerID), (innerID - washpipeOD) * calcEccentricityFactor(washpipeOD, innerID, "eccentric"), fluid_density, fluid_viscosity)
-        #frictionFactorWPSCR = calcFrictionColebrook((innerID - washpipeOD) * calcEccentricityFactor(washpipeOD, innerID, "eccentric"), NRe, washpipeRoughness)
-        #washpipeScreenDP2 = calcDPf(frictionFactorWPSCR, fluid_density, calcVelocity(q, washpipeOD, innerID), (innerID - washpipeOD) * calcEccentricityFactor(washpipeOD, innerID, "eccentric"), 1)
-
-
-        y1 = screenOHDP - washpipeScreenDP1
-        y2 = screenOHDP - washpipeScreenDP2
-        q2 = q1 - y1 / ((y2 - y1) / dq)
-        exitConverged = q2 - q1
-        loopCounter = loopCounter + 1
-        q1 = q2
-
-        #update open hole annulus calculations
-        solid_loadingOH = solid_loading * (screenOHRate + q1) / screenOHRate
-        c = solid_loadingOH / (proppantDensity * 8.34 + solid_loadingOH)
-        slurryViscosity = fluid_viscosity * calc_slurry_viscosity(solid_loadingOH, proppantDensity * 8.34, fluid_density)
-        slurryDensity = calc_slurry_density(fluid_density, absVol, solid_loadingOH)
-       transportVelocity = calc_horizontal_transport_Oroskar(equivalentDiameter, proppantDiameter, proppantDensity * 8.34, fluid_density, fluid_viscosity, c, 1)
-                
-        screenOHRate = unit(transportVelocity * calc_alpha_wave_dune_height(outerID,innerOD, centralizerOD, DHR)[1] / 144, "ft3", "bbl") * 60
-        NRe = calc_NRe_newton(transportVelocity, hydraulic_diameter, slurryDensity, slurryViscosity)
-        frictionFactorAlpha = calc_friction_colebrook(hydraulic_diameter, NRe, outerRoughness)
-        screenOHDP = calc_DPf(frictionFactorAlpha, slurryDensity, transportVelocity, hydraulic_diameter, 1)
-    
-    washpipeScreenRate = q1
-    vel = calc_fluid_velocity(washpipeScreenRate + screenOHRate, washpipeOD, innerID)
-    NRe = calc_NRe_newton(vel, innerID - washpipeOD, fluid_density, fluid_viscosity)
-    frictionFactorWPSCR = calc_friction_colebrook(innerID - washpipeOD, NRe, innerRoughness)
-    washpipeScreenDP = calc_DPf(frictionFactorWPSCR, fluid_density, vel, innerID - washpipeOD, 1) * calc_eccentricity_factor_powerlaw(nPrime, kPrime, NRe, innerID, washpipeOD, eccentricityWP)
-    
-    #NRe = calcNReNewton(vel, (innerID - washpipeOD) * calcEccentricityFactor(washpipeOD, innerID, "eccentric"), fluid_density, fluid_viscosity)
-    #frictionFactorWPSCR = calcFrictionColebrook((innerID - washpipeOD) * calcEccentricityFactor(washpipeOD, innerID, "eccentric"), NRe, innerRoughness)
-    #washpipeScreenDP = calcDPf(frictionFactorWPSCR, fluid_density, vel, (innerID - washpipeOD) * calcEccentricityFactor(washpipeOD, innerID, "eccentric"), 1)
-    
-    returnRate = screenOHRate + washpipeScreenRate
-    
-    output = [DHR,duneHeight, hydraulic_diameter, screenOHRate, washpipeScreenRate, returnRate, screenOHDP, washpipeScreenDP]
-    calcAlphaWave = output[:]
-    return calcAlphaWave
-
-
+    return hydraulic_diameter, equivalent_diameter, area_o, area_i, perimeter_o, perimeter_i, width_o, width_i
 
 #*************************************************************************
 #SURVEY EQUATIONS
@@ -1030,18 +1039,18 @@ def calc_dls(md1, md2, a1, a2, e1, e2):      #angles in degree
 #Burst and Collapse Equations
 def calc_pipe_temperature_derating(temperature):
     #temperature:deg F      output:dimensionless
-    calc_pipe_temperature_derating = (1 - 0.0003 * (temperature - 75))
-    return calc_pipe_temperature_derating
+    pipe_temperature_derating = (1 - 0.0003 * (temperature - 75))
+    return pipe_temperature_derating
 
-def calc_API_tension(Yp, tubing_OD, tubing_ID):
-    calc_API_tension = Yp * math.pi * (tubing_OD**2 - tubing_ID**2) / 4
-    return calc_API_tension
+def calc_API_tensile(Yp, tubing_OD, tubing_ID):
+    API_tensile = Yp * math.pi * (tubing_OD**2 - tubing_ID**2) / 4
+    return API_tensile
 
 def calc_API_burst(Yp, tubing_OD, tubing_ID, eccentricity=0.875):
     #Yp,output:stress unit     tubing_OD,tubing_ID:length
     #Barlow's equation
-    calc_API_burst = Yp * eccentricity * (tubing_OD - tubing_ID) / tubing_OD
-    return calc_API_burst
+    API_burst = Yp * eccentricity * (tubing_OD - tubing_ID) / tubing_OD
+    return API_burst
 
 def calc_Lame_stress(Ro, Ri, r, Po, Pi):
     #Ro,Ri,r:inch        Po,Pi,output:psi
@@ -1094,9 +1103,9 @@ def calc_VM_envelope(Yp, tubing_OD, tubing_ID, radius, eccentricity=0.875, tempe
         tension.append(axial_stress[_x] * cross_section_area / DF_tension / 1000)
     return pressure, tension
 
-def calc_API_collapse(Yp, outer_diameter, inner_diameter, Youngs_modulus, Poissons_ratio, temperature=75.0, axial_stress=0.0, DF_collapse=1.0):
+def calc_API_collapse(Yp, tubing_OD, tubing_ID, Youngs_modulus, Poissons_ratio, temperature=75.0, axial_stress=0.0, DF_collapse=1.0):
     #Yp,axial_stress,output:psi      outer_diameter,inner_diameter:inch     temperature:deg F
-    Dt = outer_diameter / ((outer_diameter - inner_diameter) / 2) 
+    Dt = tubing_OD / ((tubing_OD - tubing_ID) / 2) 
     Ypt = Yp * calc_pipe_temperature_derating(temperature)
     Ypa = Ypt * (math.sqrt(1-0.75 * (axial_stress/Ypt)**2) - 0.5*axial_stress/Yp)
     _A = 2.8762 + Ypa * 0.10679 * 10**-5 + Ypa**2 * 0.21302 * 10**-10 - Ypa**3 * 0.53132 * 10**-16
@@ -1106,35 +1115,35 @@ def calc_API_collapse(Yp, outer_diameter, inner_diameter, Youngs_modulus, Poisso
     _G = _F * _B / _A
 
     if Dt <= (math.sqrt((_A-2)**2 + 8*(_B+_C/Ypa))+(_A-2)) / (2*(_B+_C/Ypa)):
-        calc_API_collapse = 2 * Ypa * (Dt - 1)/(Dt**2)
+        API_collapse = 2 * Ypa * (Dt - 1)/(Dt**2)
     elif Dt <= (Ypa * (_A - _F)) / (_C + Ypa * (_B - _G)):
-        calc_API_collapse = Ypa * (_A/Dt - _B) - _C
+        API_collapse = Ypa * (_A/Dt - _B) - _C
     elif Dt <= (2+_B/_A) / (3*_B/_A):
-        calc_API_collapse = Ypa * (_F/Dt - _G)
+        API_collapse = Ypa * (_F/Dt - _G)
     else:
-        calc_API_collapse = (2*Youngs_modulus)/(1-Poissons_ratio**2) * 1/(Dt * (Dt - 1)**2) / DF_collapse
-    return calc_API_collapse    
+        API_collapse = (2*Youngs_modulus)/(1-Poissons_ratio**2) * 1/(Dt * (Dt - 1)**2) / DF_collapse
+    return API_collapse    
 
 #Buckling and Tubemove Equations
-def HookesLawDL(length, force, youngsModulus, area):   #units of L
-    HookesLawDL = -length * force / youngsModulus / area
-    return HookesLawDL
+def calc_dL_HookesLaw(length, force, youngsModulus, area):   #units of L
+    dL_HookesLaw = -length * force / youngsModulus / area
+    return dL_HookesLaw
 
-def HookesLawForce(length, dL, youngsModulus, area):   #lbf
-    HookesLawForce = dL * youngsModulus * area / length
-    return HookesLawForce
+def calc_force_HookesLaw(length, dL, youngsModulus, area):   #lbf
+    force_HookesLaw = dL * youngsModulus * area / length
+    return force_HookesLaw
 
-def calcBuoyedWeight(pipeWt, tubingfluid_density, IDArea, casingfluid_density, ODArea): #lb/ft
-    calcBuoyedWeight = pipeWt + (tubingfluid_density * IDArea - casingfluid_density * ODArea) * 12 / 231
-    return calcBuoyedWeight
+def calc_buoyed_weight(pipeWt, tubingfluid_density, IDArea, casingfluid_density, ODArea): #lb/ft
+    buoyed_weight = pipeWt + (tubingfluid_density * IDArea - casingfluid_density * ODArea) * 12 / 231
+    return buoyed_weight
 
-def calcPasleyForce(buoyWt, angle, youngsModulus, momentInertia, rc):        #lbf
+def calc_force_Pasley(buoyWt, angle, youngsModulus, momentInertia, rc):        #lbf
     criticalAngle = math.asin((1.94 / 2) ** 2 * rc * ((buoyWt / 12) / (youngsModulus * momentInertia)) ** (1 / 3))
     if (angle) >= criticalAngle:
-        calcPasleyForce = math.sqrt(4 * (buoyWt / 12) * math.sin(angle) * youngsModulus * momentInertia / rc)
+        force_Pasley = math.sqrt(4 * (buoyWt / 12) * math.sin(angle) * youngsModulus * momentInertia / rc)
     else:
-        calcPasleyForce = 1.94 * (youngsModulus * momentInertia * (buoyWt / 12) ** 2) ** (1 / 3)
-    return calcPasleyForce
+        force_Pasley = 1.94 * (youngsModulus * momentInertia * (buoyWt / 12) ** 2) ** (1 / 3)
+    return force_Pasley
     
 def calcNormalBucklingForce(rc, force, youngsModulus, momentInertia):        #lbf/ft
     calcNormalBucklingForce = rc * force ** 2 / (4 * youngsModulus * momentInertia) * 12
@@ -1198,6 +1207,15 @@ def calcSlackoffForce(force, axialBuoyWt, normalBuoyWt, normalBucklingWt, pulley
 def calcPickupForce(force, axialBuoyWt, normalBuoyWt, normalBucklingWt, pulleyWt, friction, length):
     calcPickupForce = force - (axialBuoyWt + (normalBuoyWt + normalBucklingWt + pulleyWt) * friction) * length
     return calcPickupForce
+
+#def xFictForceSlackoff(F2, wBuoyedAxial, wBuoyedNormal, wBucklingNormal, wPulley, ffriction, L):
+#    f1 = F2 - (wBuoyedAxial - (wBuoyedNormal + wBucklingNormal + wPulley) * ffriction) * L
+#    FictForceSlackoff = f1
+#
+#def xFictForcePickup(F2, wBuoyedAxial, wBuoyedNormal, wBucklingNormal, wPulley, ffriction, L):
+#    f1 = F2 - (wBuoyedAxial + (wBuoyedNormal + wBucklingNormal + wPulley) * ffriction) * L
+#    FictForcePickup = f1
+#
 
 
 
@@ -2222,8 +2240,8 @@ def unit(value, x_unit, y_unit):   #value, original unit, new unit
         'liter/min': x * 1.44,
     }
     
-    print(unit_dictionary[x_unit])
-    print(unit_dictionary[y_unit])
+    #print(unit_dictionary[x_unit])
+    #print(unit_dictionary[y_unit])
     unit = value * unit_dictionary[x_unit] / unit_dictionary[y_unit]
     return unit
 
@@ -2263,5 +2281,131 @@ def calc_interpolate(x, x_vector, y_vector):
             y = (x - x_1) / (x_2 - x_1) * (y_2 - y_1) + y_1
             i = len(x_vector)  
     calcInterp = y
+    """    
+    for i in range(len(x_vector)):
+        if x == x_vector[i]:     #exact solution
+            y = y_vector[i]
+            i = len(x_vector)
+        elif x < x_vector[0]:     #if below range
+            x_1 = x_vector[0]
+            x_2 = x_vector[1]
+            y_1 = y_vector[0]
+            y_2 = y_vector[1]
+            y = y_1 - (x_1 - x) / (x_2 - x_1) * (y_2 - y_1)
+            i = len(x_vector)
+        elif x > x_vector[len(x_vector)]:     #if above range
+            x_1 = x_vector[len(x_vector) - 2]
+            x_2 = x_vector[len(x_vector) - 1]
+            y_1 = y_vector[len(y_vector) - 2]
+            y_2 = y_vector[len(y_vector) - 1]
+            y = (x - x_2) / (x_2 - x_1) * (y_2 - y_1) + y_2
+            i = len(y_vector)
+        elif x > x_vector[i] and x < x_vector[i + 1]:     #if between values
+            x_1 = x_vector[i]
+            x_2 = x_vector[i + 1]
+            y_1 = y_vector[i]
+            y_2 = y_vector[i + 1]
+            y = (x - x_1) / (x_2 - x_1) * (y_2 - y_1) + y_1
+            i = len(x_vector)  
+    calcInterp = y
+    """
     return calcInterp
 
+# #*************************************************************************
+# #from https://msdn.microsoft.com/en-us/library/csfk8t62(VS.85).aspx
+# def Log10(x)   #log base 10 conversion
+#     Log10 = Log(x) / Log(10)
+
+# def Sec(x)     #Secant
+#     Sec = 1 / Cos(x)
+
+# def Cosec(x)   #Cosecant
+#     Cosec = 1 / Sin(x)
+
+# def Cotan(x)   #Cotangent
+#     Cotan = 1 / Tan(x)
+
+# def Arcsin(x)  #Inverse Sine
+#     if x = 1:
+#         Arcsin = pi / 2
+#     elif x = -1:
+#         Arcsin = -pi / 2
+#     Else
+#         Arcsin = Atn(x / sqrt(-x * x + 1))   
+
+# def Arccos(x)  #Inverse Cosine
+#     if x = -1:
+#         Arccos = pi
+#     elif x = 1:
+#         Arccos = 0
+#     Else
+#         Arccos = Atn(-x / sqrt(-x * x + 1)) + 2 * Atn(1)   
+
+# def Arcsec(x)  #Inverse Secant
+#     Arcsec = Atn(x / sqrt(x * x - 1)) + Sgn((x) - 1) * (2 * Atn(1))
+
+# def Arccosec(x)    #Inverse Cosecant
+#     Arccosec = Atn(x / sqrt(x * x - 1)) + (Sgn(x) - 1) * (2 * Atn(1))
+
+# def Arccotan(x)    #Inverse Cotangent
+#     Arccotan = -Atn(x) + 2 * Atn(1)
+
+# def HSin(x)    #Hyperbolic Sine
+#     HSin = (Exp(x) - Exp(-x)) / 2
+
+# def HCos(x)    #Hyperbolic Cosine
+#     HCos = (Exp(x) + Exp(-x)) / 2
+
+# def HTan(x)    #Hyperbolic Tangent
+#     HTan = (Exp(x) - Exp(-x)) / (Exp(x) + Exp(-x))
+
+# def HSec(x)    #Hyperbolic Secant
+#     HSec = 2 / (Exp(x) + Exp(-x))
+
+# def HCosec(x)  #Hyperbolic Cosecant
+#     HCosec = 2 / (Exp(x) - Exp(-x))
+
+# def HCotan(x)  #Hyperbolic Cotangent
+#     HCotan = (Exp(x) + Exp(-x)) / (Exp(x) - Exp(-x))
+
+# def HArcsin(x) #Inverse Hyperbolic Sine
+#     HArcsin = Log(x + sqrt(x * x + 1))
+
+# def HArccos(x) #Inverse Hyperbolic Cosine
+#     HArccos = Log(x + sqrt(x * x - 1))
+
+# def HArctan(x) #Inverse Hyperbolic Tangent
+#     HArctan = Log((1 + x) / (1 - x)) / 2
+
+# def HArcsec(x) #Inverse Hyperbolic Secant
+#     HArcsec = Log((sqrt(-x * x + 1) + 1) / x)
+
+# def HArccosec(x)   #Inverse Hyperbolic Cosecant
+#     HArccosec = Log((Sgn(x) * sqrt(x * x + 1) + 1) / x)
+
+# def HArccotan(x)   #Inverse Hyperbolic Cotangent
+#     HArccotan = Log((x + 1) / (x - 1)) / 2
+
+# def ATn2(ByVal DX As Double, ByVal DY As Double) As Double
+#     if DY < 0:
+#         ATn2 = -ATn2(DX, -DY)
+#     elif DX < 0:
+#         ATn2 = pi - Atn(-DY / DX)
+#     elif DX > 0:
+#         ATn2 = Atn(DY / DX)
+#     elif DY <> 0:
+#         ATn2 = pi / 2
+#     Else
+#         ATn2 = 1 / 0
+    
+# def Atn2v(ByVal DX As Double, ByVal DY As Double) As Double
+#     if DY < 0:
+#         Atn2v = -Atn2v(DX, -DY)
+#     elif DX < 0:
+#         Atn2v = pi - Atn(-DY / DX)
+#     elif DX > 0:
+#         Atn2v = Atn(DY / DX)
+#     elif DY <> 0:
+#         Atn2v = pi / 2
+#     Else
+#         Atn2v = CVErr(xlErrDiv0)
