@@ -425,7 +425,7 @@ def calc_horizontal_transport_SGS(equivalent_diameter, solid_diameter, solid_den
         (_CONST1 * _CONST2 * equivalent_diameter * fluid_density / fluid_viscosity * math.sqrt(GRAVITY_CONSTANT * solid_diameter * (solid_density / fluid_density - 1))) ** _CONSTn3
     return horizontal_transport_SGS
 
-def calc_horizontal_transport_SGSl_alt(equivalent_diameter, solid_diameter, solid_density, fluid_density, fluid_viscosity, c, bed_width, wetted_perimeter, 
+def calc_horizontal_transport_SGS_alt(equivalent_diameter, solid_diameter, solid_density, fluid_density, fluid_viscosity, c, bed_width, wetted_perimeter, 
                                     _CONSTY = 1.15915872803019, _CONSTn1 = -3.58822426562324, _CONSTn2 = 0.377485123473551, _CONSTn3 = -0.272080143824705, _CONSTn4 = 0.05439676041480):
     #solid_density,fluid_density:ppg      hydraulic_diameter,solid_diameter,hole_diameter:in     viscosity:cP  height:height of dune    output:ft/s
     #c: solids concentration, loading/(loading+density)
