@@ -226,9 +226,6 @@ def calc_eccentricity_factor_powerlaw(nPrime, kPrime, NRe, tubing_diameter, casi
         if NRe < (3250 - 1150 * nPrime):
             #Haciislamoglu & Langlinais, 1990 - as described in SPE 111514
             eccentricity_factor_powerlaw = 1 - (0.072 * eccentricity / nPrime * diameter_ratio ** 0.8454) - (1.5 * eccentricity ** 2 * math.sqrt(nPrime) * diameter_ratio ** 0.1852) + (0.96 * eccentricity ** 3 * math.sqrt(nPrime) * diameter_ratio ** 0.2527)
-            #error in below originally?
-            #eccentricity_factor_powerlaw = 1 - (0.072 * eccentricity / nPrime * kPrime ** 0.8454) - (1.5 * eccentricity ** 2 * sqrt(nPrime) * kPrime ** 0.1852) + (0.96 * eccentricity ** 3 * sqrt(nPrime) * kPrime ** 0.2527)
-            #eccentricity_factor_powerlaw = 1 - (0.1019 * eccentricity * nPrime *)
         else:
             #Aadnoy, Cooper, Miska, Mitchel, & Payne, 2009 
             eccentricity_factor_powerlaw = 1 - (0.048 * eccentricity / nPrime * kPrime ** 0.8454) - (0.67 * eccentricity ** 2 * math.sqrt(nPrime) * kPrime ** 0.1852) + (0.28 * eccentricity ** 3 * math.sqrt(nPrime) * kPrime ** 0.2527) 
